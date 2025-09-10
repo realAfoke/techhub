@@ -108,7 +108,8 @@ class Products(models.Model):
     slug=models.SlugField()
     description=models.TextField()
     price=models.DecimalField(max_digits=10,decimal_places=2)
-    sku=models.CharField(max_length=200,unique=True)
+    current_price=models.DecimalField(max_digits=10,decimal_places=2)
+    sku=models.CharField(max_length=200)
     specs=models.JSONField()
     stock_quantity=models.IntegerField()
     is_active=models.BooleanField(default=True)
@@ -122,8 +123,9 @@ class Products(models.Model):
         db_table='products'
 
     def save(self,*args,**kwargs):
-        if not self.slug:
+        if not (self.slug or self.current_price):
             self.slug=slugify(self.name)
+            self.current_price=self.price
         return super().save(*args,**kwargs)
 
     def __str__(self):
@@ -168,7 +170,38 @@ class CartItem(models.Model):
    current_price=models.DecimalField(max_digits=10,decimal_places=2,null=True,blank=True)
    total=models.IntegerField(null=True)
 
-
-
    class Meta:
        db_table="cartitem"
+    
+   def __str__(self):
+        return self.product.name
+   
+
+class Order(models.Model):
+    user=models.ForeignKey(User,related_name='order',on_delete=models.CASCADE)
+    total_order=models.DecimalField(decimal_places=2,max_digits=10)
+    total_quantity=models.IntegerField(null=True)
+    shipping_address=models.TextField()
+    phone=models.CharField(max_length=15,null=True)
+    order_status=models.CharField(max_length=200,default='pending')
+    order_date=models.DateTimeField(auto_now_add=True)
+    updated_at=models.DateTimeField(auto_now=True)
+    order_id=models.CharField(max_length=200)
+
+    class Meta:
+        db_table='order'
+
+    def __str__(self):
+        return self.user.email
+    
+
+class OrderedItem(models.Model):
+    order=models.ForeignKey(Order,related_name='order_item',on_delete=models.CASCADE)
+    product=models.ForeignKey(Products,related_name='order_product',on_delete=models.PROTECT)
+    quantity=models.IntegerField()
+    price=models.DecimalField(max_digits=10,decimal_places=2,null=True)
+    total=models.DecimalField(max_digits=10,decimal_places=2,null=True)
+
+    class Meta:
+        db_table='ordereditem'  
+
