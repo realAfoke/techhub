@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from django.contrib.auth import get_user_model
-from . models import Categories,Brands,ProductImage,Products,CartItem,Cart,Order,OrderedItem
+from . models import Categories,Brands,ProductImage,Products,CartItem,Cart,Order,OrderedItem,PaymentMethod,Payment,SavedCard
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from uuid import uuid4
 from datetime import datetime
@@ -12,10 +12,12 @@ class SignUpSerializer(serializers.ModelSerializer):
     password=serializers.CharField(write_only=True)
     class Meta:
         model=User
-        fields=['first_name','last_name','email', 'phone','password']
+        fields=['id','first_name','last_name','email', 'phone','password']
 
     def create(self, validated_data):
         user=User.objects.create_user(**validated_data)
+
+        user.send_verification_email()
 
         return user   
 
@@ -123,7 +125,7 @@ class OrderItemSerializer(serializers.ModelSerializer):
         model=OrderedItem
         fields="__all__"  
     
-    
+
         
 class OrderSerializer(serializers.ModelSerializer):
     order_item=OrderItemSerializer(many=True,read_only=True)
@@ -140,20 +142,40 @@ class OrderSerializer(serializers.ModelSerializer):
         fields=['id','order_item','shipping_address','phone','total_amount','total_quantity','delivery_fee','order_id','order_status','created_at']
 
     def create(self, validated_data):
-        print(validated_data)
-        order_id=str(datetime.now()) + str(uuid4())
-        real_id=re.sub(r"[^a-zA-Z0-9]","",order_id)
-        order,create=Order.objects.get_or_create(order_id=validated_data.get('order_id',real_id),defaults={"total_order":sum(item["total"] for item in validated_data["order_item"]),"total_quantity":sum(item["quantity"] for item in validated_data["order_item"]),"shipping_address":validated_data["shipping_address"],"phone":validated_data["phone"],"user":validated_data['user']})      
+        order_id=validated_data['order_item'][0]['order_id']
+        order,create=Order.objects.get_or_create(order_id=order_id,defaults={"total_order":sum(item["total"] for item in validated_data["order_item"]),"total_quantity":sum(item["quantity"] for item in validated_data["order_item"]),"shipping_address":validated_data["shipping_address"],"phone":validated_data["phone"],"user":validated_data['user']})      
         for item in validated_data["order_item"]:
             order_item=OrderedItem.objects.create(order=order,product=item['product'],quantity=item["quantity"],price=item["price"],total=item["total"])
-
         return order
     
     def get_total_amount(self,obj):
-        return sum([item.total for item in obj.order_item.all()])
+        return sum([item.total for item in obj.order_item.all()])+ self.get_delivery_fee(obj)
     def get_total_quantity(self,obj):
-        return sum([item.quantity for item in obj.order_item.all()])
+        return sum(item.quantity for item in obj.order_item.all())
     def get_created_at(self,obj):
         return obj.order_date
     def get_delivery_fee(self,obj):
-        return 750 if self.get_total_quantity(obj) < 1 else 2280
+        return 750 if self.get_total_quantity(obj) <= 2 else 2280
+
+
+# class PaymentMethod(serializers.ModelSerializer):
+#     class Meta:
+#         model=PaymentMethod
+#         fields=['id','code']
+
+
+# class PaymentSeriliazer(serializers.ModelSerializer):
+#     method=serializers.PrimaryKeyRelatedField(queryset=PaymentMethod.objects.all())
+#     order=serializers.PrimaryKeyRelatedField(queryset=Order.objects.all())
+#     amount=serializers.ReadOnlyField()
+#     currency=serializers.ReadOnlyField()
+#     status=serializers.ReadOnlyField()
+#     paystack_reference=serializers.ReadOnlyField()
+#     paystack_response=serializers.ReadOnlyField()
+
+#     class Meta:
+#         model=Payment
+#         fields=['id','method','order','amount','currency','status','paystack_reference','paystack_response']
+
+    # def create(self, validated_data):
+        #

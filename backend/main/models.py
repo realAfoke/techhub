@@ -2,10 +2,11 @@ from django.db import models
 from django.contrib.auth.base_user import BaseUserManager
 from django.contrib.auth.models import AbstractBaseUser,PermissionsMixin
 from django.utils.text import slugify
-from django.contrib.auth import get_user_model
 from django.utils import timezone
+from datetime import timedelta
+from django.core.mail import send_mail
+from uuid import uuid4
 
-# Users=get_user_model()
 
 # Create your models here.
 class CustomUserManager(BaseUserManager):
@@ -42,7 +43,7 @@ class User(AbstractBaseUser,PermissionsMixin):
     last_name=models.CharField(max_length=200)
     email=models.EmailField(unique=True)
     phone=models.CharField(max_length=15)
-    is_verified=models.BooleanField(null=True,blank=False)
+    is_verified=models.BooleanField(null=True,blank=False,default=False)
     data_joined=models.DateTimeField(auto_now_add=True)
     state=models.CharField(max_length=200)
     city=models.CharField(max_length=200)
@@ -60,6 +61,40 @@ class User(AbstractBaseUser,PermissionsMixin):
     
     class Meta():
         db_table='usermodel'
+
+    def send_verification_email(self):
+        EmailVerificationToken.objects.filter(created__lt=timezone.now()-timedelta(hours=24),is_used=False).delete()
+        token=EmailVerificationToken.objects.create(user=self)
+        verification_url=f"http://127.0.0.1:8000/verify-email/{token.token}/"
+        send_mail(
+        subject='Verify your TechHub account',
+        message=f'Click this link to verify: {verification_url}',
+        # from_email=settings.DEFAULT_FROM_EMAIL,
+        from_email='noreply@techhub.com',
+        recipient_list=[self.email],
+        fail_silently=False,
+    )
+        
+    def send_password_reset_email(self):
+        PasswordResetToken.objects.filter(
+            created__lt=timezone.now() - timedelta(hours=24),
+            is_used=False
+        ).delete()
+        
+        token = PasswordResetToken.objects.create(user=self)
+        
+        reset_url = f"http://localhost:8000/reset-password/{token.token}/"
+        
+        send_mail(
+            subject='Reset your TechHub password',
+            message=f'Click this link to reset your password: {reset_url}',
+            from_email='noreply@techhub.com',
+            recipient_list=[self.email],
+            fail_silently=False,
+        )
+
+
+
     
 class Categories(models.Model):
     name=models.CharField(max_length=200)
@@ -194,6 +229,31 @@ class Order(models.Model):
     def __str__(self):
         return self.user.email
     
+    def send_pending_mail(self):
+        formatted=self.updated_at.strftime("%b %d %Y")
+        print(formatted)
+        Subject=f" Order Confirmation - Order {self.order_id}"
+
+        body=f"""
+
+        Hello {self.user.first_name} {self.user.last_name}
+
+        Order Number:{self.order_id}
+        # Order Date:{formatted}
+        Status: {self.order_status}
+
+        Shipping Address:{self.shipping_address}
+        
+
+        Total: ${self.total_order}
+
+        We’ll notify you when your order ships.
+        If you have questions, contact us at support@myshop.com.
+
+        Thank you for shopping with us!
+        """
+        send_mail(Subject,body,'no-reply@myshop.com',[self.user.email],fail_silently=False)
+    
 
 class OrderedItem(models.Model):
     order=models.ForeignKey(Order,related_name='order_item',on_delete=models.CASCADE)
@@ -203,5 +263,75 @@ class OrderedItem(models.Model):
     total=models.DecimalField(max_digits=10,decimal_places=2,null=True)
 
     class Meta:
-        db_table='ordereditem'  
+        db_table='ordereditem'
 
+    # def send_pending_mail(self):
+
+
+
+
+class PaymentMethod(models.Model):
+    name=models.CharField(max_length=200)
+    code=models.CharField(max_length=100)
+    is_active=models.BooleanField(default=True)
+    fees=models.DecimalField(max_digits=10,decimal_places=2)
+    description=models.TextField()
+    created_at=models.DateTimeField(auto_now_add=True)
+    updated_at=models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table='payment_method'
+
+    def __str__(self):
+        return self.code
+
+
+class SavedCard(models.Model):
+    user=models.ForeignKey(User,related_name='card',on_delete=models.CASCADE)
+    payment_method=models.ForeignKey(PaymentMethod,related_name='save_card',on_delete=models.CASCADE)
+    masked_card_number=models.CharField(max_length=200)
+    expiry_month=models.IntegerField()
+    expiry_year=models.IntegerField()
+    paystack_token=models.CharField(max_length=200)
+    is_default=models.BooleanField()
+    is_active=models.BooleanField()
+    nickname=models.CharField(max_length=200)
+    created_at=models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table='save_card'
+
+    def __str__(self):
+        return self.payment_method
+    
+
+class Payment(models.Model):
+    method=models.ForeignKey(PaymentMethod,related_name='payment',on_delete=models.PROTECT)
+    saved_card=models.ForeignKey(SavedCard,related_name='payment',null=True,blank=True,on_delete=models.SET_NULL)
+    order=models.ForeignKey(Order,related_name='payment',on_delete=models.CASCADE)
+    amount=models.DecimalField(max_digits=10,decimal_places=2)
+    currency=models.CharField(max_length=200)
+    status=models.CharField(max_length=200)
+    paystack_reference=models.CharField(max_length=300)
+    paystack_response=models.JSONField()
+    created_at=models.DateTimeField(auto_now_add=True)
+    updated_at=models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table='payment'
+
+    def __str__(self):
+        return self.method
+
+
+class EmailVerificationToken(models.Model):
+    user=models.ForeignKey(User,related_name='email_verif',on_delete=models.CASCADE)
+    token=models.UUIDField(default=uuid4)
+    created=models.DateTimeField(auto_now_add=True)
+    is_used=models.BooleanField(default=False)
+
+class PasswordResetToken(models.Model):
+    user=models.ForeignKey(User,related_name='password_token',on_delete=models.CASCADE)
+    token=models.UUIDField(default=uuid4)
+    created=models.DateTimeField(auto_now_add=True)
+    is_used=models.BooleanField(default=False)

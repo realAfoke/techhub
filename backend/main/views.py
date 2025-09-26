@@ -7,13 +7,26 @@ from . import serializers
 from rest_framework import permissions
 from rest_framework.reverse import reverse
 from datetime import timedelta
+from django.utils import timezone
 from django.contrib.auth import get_user_model
 from rest_framework import permissions
 from rest_framework_simplejwt.views import TokenObtainPairView
-from main.auth_serializer import IsOwner
+from main.auth_serializer import IsOwner,IsVerified
 from rest_framework.exceptions import ValidationError
 from rest_framework import status
 from django.db import transaction
+from django.db.models import Q
+from asgiref.sync import sync_to_async
+from datetime import datetime
+from uuid import uuid4
+import re
+import time
+from django.contrib.auth.tokens import default_token_generator
+from django.utils.encoding import force_bytes
+from django.utils.http import urlsafe_base64_encode
+from rest_framework.request import Request
+from pprint import pprint
+from django.contrib.auth.views import PasswordResetView
 
 User=get_user_model()
 
@@ -23,7 +36,7 @@ class LoginView(TokenObtainPairView):
 class Root(APIView):
     def get(self,request):
         return Response(
-            {
+            {   'sign_up':reverse('signup-view',request=request),
                 'add_cart_item':reverse('cart-list',request=request),
                 'add_product':reverse('product-view',request=request),
                 'login':reverse('login-view',request=request),
@@ -31,29 +44,75 @@ class Root(APIView):
                 # 'checkout':reverse('checkout-view',request=request),
             }
         )
-# class SignUpView(generics.ListCreateAPIView):
-#     queryset=User.objects.all()
-#     serializer_class=serializers.SignUpSerializer
+class SignUpView(generics.ListCreateAPIView):
+    queryset=User.objects.all()
+    serializer_class=serializers.SignUpSerializer
+
+
+class PasswordResetView(APIView):
+    def post(self,request):
+        email=request.data.get('email')
+        reset=None
+        try:
+            if request.user.is_authenticated:
+                reset=request.user
+            else:
+                reset=models.User.objects.get(email=email)
+            reset.send_password_reset_email()
+            
+        except models.User.DoesNotExist:
+            pass
+        return Response({'message':'you will get a reset link via the email provided'})
+    
+class PasswordResetConfirmView(APIView):
+    def post(self,request,*args,**kwargs):
+        token=kwargs['token']
+        new_password=request.data.get('new_password')
+        try:
+            password=models.PasswordResetToken.objects.get(token=token)
+            if not password or password.created < timezone.now()-timedelta(hours=24):
+                raise ValidationError('link expired')
+            password.user.set_password(new_password)
+            password.is_used=True
+            password.user.save()
+            password.save()
+            return Response({'mssg':'passwod reset successful login with your new password'})
+        except models.PasswordResetToken.DoesNotExist:
+            return Response({'mssg':'link expired'})
+        
 
 # class UserListView(generics.ListAPIView):
 #     queryset=User.objects.all()
 #     serializer_class=serializers.UserSerializer
-#     # permission_classes=[permissions.IsAuthenticatedOrReadOnly]
+    # permission_classes=[permissions.IsAuthenticatedOrReadOnly]
 
-# class CategoriesListView(generics.ListCreateAPIView):
-#     queryset=models.Categories.objects.all()
-#     serializer_class=serializers.CategoriesSerializer
-#     # permission_classes=[permissions.IsAuthenticated]
 
-# class CategoriesDetailView(generics.RetrieveUpdateDestroyAPIView):
-#     queryset=models.Categories.objects.all()
-#     serializer_class=serializers.CategoriesSerializer
 
+class CategoriesListView(generics.ListCreateAPIView):
+    queryset=models.Categories.objects.all()
+    serializer_class=serializers.CategoriesSerializer
+    # permission_classes=[permissions.IsAuthenticated]
+
+class CategoriesDetailView(generics.RetrieveUpdateDestroyAPIView):
+    queryset=models.Categories.objects.all()
+    serializer_class=serializers.CategoriesSerializer
+class BaseSearchView(generics.ListAPIView):
+    def filter(self,request):
+        queryset=self.get_queryset()
+        params=dict(self.request.query_params)
+        search_params=Q() 
+        for k,v in params.items(): 
+            search_params |= Q(**{f"{k}__icontains":v[0]}) 
+        return queryset.filter(search_params)
+    def list(self, request, *args, **kwargs):
+        queryset=self.filter(request)
+        serializer=self.get_serializer(queryset,many=True)
+        return Response(serializer.data)
 class BrandListView(generics.ListCreateAPIView):
     queryset=models.Brands.objects.all()
     serializer_class=serializers.BrandsSerializer
 
-class ProductsListView(generics.ListCreateAPIView):
+class ProductsListView(generics.ListCreateAPIView,BaseSearchView):
     queryset=models.Products.objects.all()
     serializer_class=serializers.ProductSerializer
     permission_classes=[permissions.IsAuthenticatedOrReadOnly]
@@ -112,7 +171,7 @@ def checkout(request,cart_id):
 class PlaceOrderView(generics.CreateAPIView):
     queryset=models.Order.objects.all()
     serializer_class=serializers.OrderSerializer
-    pagination_class=[permissions.IsAuthenticatedOrReadOnly,IsOwner]
+    permission_classes=[permissions.IsAuthenticatedOrReadOnly,IsOwner,IsVerified]
     def create(self, request, *args, **kwargs):
         serializer=self.get_serializer(data=request.data)
         try:
@@ -134,6 +193,8 @@ class PlaceOrderView(generics.CreateAPIView):
         cart=models.Cart.objects.get(cart_id=self.request.data.get('cart_id'))
         items=models.CartItem.objects.filter(cart=cart)
         items_list=[]
+        order_id=str(datetime.now()) + str(uuid4())
+        real_id=re.sub(r"[^a-zA-Z0-9]","",order_id)
         for item in items:
             if item.quantity > item.product.stock_quantity:
                 raise ValidationError("carted prodduct quantity is more than stock quantity please reduce product quantity")
@@ -142,12 +203,16 @@ class PlaceOrderView(generics.CreateAPIView):
             order_item['quantity']=item.quantity
             order_item['price']=item.current_price
             order_item['total']=item.quantity*item.current_price
+            order_item['order_id']=real_id
             items_list.append(order_item)
             item.product.stock_quantity=item.product.stock_quantity - item .quantity
             item.product.save()
-            print(item.product.stock_quantity,"product stock >>>>>>>>")
         serializer.save(order_item=items_list,user=self.request.user)
         cart.delete()
+        email=models.Order.objects.get(order_id=real_id)
+        email.send_pending_mail()
+        # time.s
+        # orderConfirmationEmail(real_id)
         
 class OrderHistoryView(generics.ListAPIView):
     serializer_class=serializers.OrderSerializer
@@ -158,6 +223,41 @@ class OrderHistoryView(generics.ListAPIView):
         serializer=self.get_serializer(queryset,many=True)
         return Response(serializer.data)
 
+
+class SearchView(BaseSearchView):
+    queryset=models.Products.objects.all()
+    serializer_class=serializers.ProductSerializer
+
+def orderConfirmationEmail(order):
+    order=models.Order.objects.get(order_id=order)
+    user=models.User.objects.get(pk=order.user_id)
+    if not order:
+        return
+    
+
+class EmailVerificationView(generics.RetrieveAPIView):
+    def retrieve(self, request, *args, **kwargs):
+        token=self.kwargs['token']
+        try:
+            verification=models.EmailVerificationToken.objects.get(token=token)
+            if not verification.created or verification.created < timezone.now()- timedelta(hours=24):
+                raise ValidationError({'error':'expired','message':'invalid or expired verification link.Please request a new one.'})
+        except models.EmailVerificationToken.DoesNotExist as e:
+            return Response({'error':'expired','message':'invalid or expired verification link.Please request a new one.'})
+        verification.user.is_verified=True
+        verification.is_used=True
+        verification.user.save()
+        verification.save()
+        return Response('Email verification succesfull')
+    
+
+class SendVerification(APIView):
+    permission_classes=[permissions.IsAuthenticated]
+    def post(self,request):
+        user=request.user
+        user.send_verification_email()
+        return Response({'msg':'verification email sent'})
+    # lookup_field='token'
 # name:samsung
 # slug:samsung
 # description:the best mobile phone in the whole wide world
