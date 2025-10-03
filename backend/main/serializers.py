@@ -5,6 +5,7 @@ from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from uuid import uuid4
 from datetime import datetime
 import re
+from django.db.models import Q
 
 User=get_user_model()
 
@@ -22,11 +23,11 @@ class SignUpSerializer(serializers.ModelSerializer):
         return user   
 
 class CategoriesSerializer(serializers.HyperlinkedModelSerializer):
-    id=serializers.HyperlinkedIdentityField(view_name='cat-detail')
+    id=serializers.HyperlinkedIdentityField(view_name='categories-detail')
     slug=serializers.ReadOnlyField()
     class Meta:
         model=Categories
-        fields=['id','name','slug','description','is_active','sort_order','created_at','updated_at']
+        fields=['url','id','name','slug','description','is_active','sort_order','created_at','updated_at']
 
 class BrandsSerializer(serializers.ModelSerializer):
     slug=serializers.ReadOnlyField()
@@ -35,16 +36,38 @@ class BrandsSerializer(serializers.ModelSerializer):
         # fields=['id','name','slug','description','is_active','website','country','created_at','updated_at']
         fields="__all__"
 
-class ProductSerializer(serializers.HyperlinkedModelSerializer):
-    category=serializers.PrimaryKeyRelatedField(queryset=Categories.objects.all())
-    brand=serializers.PrimaryKeyRelatedField(queryset=Brands.objects.all())
-    slug=serializers.ReadOnlyField()
+class ProductImageSerializer(serializers.ModelSerializer):
+    class Meta:
+        model=ProductImage
+        fields="__all__"
+    
+class ProductFullSerializer(serializers.HyperlinkedModelSerializer):
+    category=CategoriesSerializer(read_only=True)
+    brand=BrandsSerializer(read_only=True)
+    product_image=ProductImageSerializer(many=True,read_only=True)
     owner=serializers.ReadOnlyField(source="owner.email")
-    # id=serializers.HyperlinkedIdentityField(view_name="products-detail")
     class Meta:
         model=Products
-        fields=['url','id','name','slug','description','price','current_price','specs','stock_quantity','is_active','is_featured','category','brand','created_at','updated_at','owner']
-        # fields="__all__"
+        fields=['url','name','slug','description','price','current_price','specs','stock_quantity','is_active','is_featured','category','brand','created_at','updated_at','owner','product_image','sku']
+
+    def create(self, validated_data):
+        brands=validated_data.get('brand')
+        custom_brand= validated_data['brand'].get('custom_brand')
+        if brands.get('brand'):
+            brand_data=Brands.objects.get(pk=brands['brand'])
+            validated_data['brand']=brand_data
+        elif custom_brand.get('name'):
+            brand_data=Brands.objects.create(**custom_brand)
+            validated_data['brand']=brand_data
+        else:
+            validated_data.pop('brand')
+        product_image=validated_data.pop('product_image',[])
+        product=Products.objects.create(**validated_data)
+        for item in product_image:
+            item['product']=product
+            ProductImage.objects.create(**item)
+        
+        return product
 
     def update(self,instance,validated_data):
         instance.name=validated_data.get('name',instance.name)
@@ -62,6 +85,12 @@ class ProductSerializer(serializers.HyperlinkedModelSerializer):
 
         instance.save()
         return instance
+
+class ProductSerializer(serializers.HyperlinkedModelSerializer):
+    product_image=ProductImageSerializer(many=True,read_only=True)
+    class Meta:
+        model=Products
+        fields=['url','name','price','current_price','sku','stock_quantity','product_image']
 
 
 class LoginSerializer(TokenObtainPairSerializer):

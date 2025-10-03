@@ -27,6 +27,7 @@ from django.utils.http import urlsafe_base64_encode
 from rest_framework.request import Request
 from pprint import pprint
 from django.contrib.auth.views import PasswordResetView
+import json
 
 User=get_user_model()
 
@@ -93,39 +94,66 @@ class CategoriesListView(generics.ListCreateAPIView):
     serializer_class=serializers.CategoriesSerializer
     # permission_classes=[permissions.IsAuthenticated]
 
+
 class CategoriesDetailView(generics.RetrieveUpdateDestroyAPIView):
     queryset=models.Categories.objects.all()
     serializer_class=serializers.CategoriesSerializer
-class BaseSearchView(generics.ListAPIView):
-    def filter(self,request):
-        queryset=self.get_queryset()
-        params=dict(self.request.query_params)
-        search_params=Q() 
-        for k,v in params.items(): 
-            search_params |= Q(**{f"{k}__icontains":v[0]}) 
-        return queryset.filter(search_params)
-    def list(self, request, *args, **kwargs):
-        queryset=self.filter(request)
-        serializer=self.get_serializer(queryset,many=True)
-        return Response(serializer.data)
+
+
+# class BaseSearchView(generics.ListAPIView):
+#     def filter(self,request):
+#         queryset=self.get_queryset()
+#         params=dict(self.request.query_params)
+#         search_params=Q() 
+#         for k,v in params.items(): 
+#             search_params |= Q(**{f"{k}__icontains":v}) 
+#         return queryset.filter(search_params)
+#     def list(self, request, *args, **kwargs):
+#         queryset=self.filter(request)
+#         serializer=self.get_serializer(queryset,many=True)
+#         return Response(serializer.data)
+    
+
 class BrandListView(generics.ListCreateAPIView):
     queryset=models.Brands.objects.all()
     serializer_class=serializers.BrandsSerializer
 
-class ProductsListView(generics.ListCreateAPIView,BaseSearchView):
-    queryset=models.Products.objects.all()
-    serializer_class=serializers.ProductSerializer
-    permission_classes=[permissions.IsAuthenticatedOrReadOnly]
 
-    def perform_create(self, serializer):
-        print(dict(self.request.data))
-        serializer.save(owner=self.request.user)
 
-class ProductDetailView(generics.RetrieveUpdateDestroyAPIView):
-    queryset=models.Products.objects.all()
-    serializer_class=serializers.ProductSerializer
+class ProductView(APIView):
     permission_classes=[permissions.IsAuthenticatedOrReadOnly,IsOwner]
-
+    def post(self,request):
+        products=request.data
+        print(products)
+        try:
+            for product in products:
+                serializer=serializers.ProductFullSerializer(data=product,context={'request':request})
+                if serializer.is_valid():
+                    category=models.Categories.objects.get(pk=product.get('category_id'))
+                    serializer.save(owner=self.request.user,brand=product.get('brand'),product_image=product.get('product_image'),category=category)
+            return Response(serializer.data,status=status.HTTP_201_CREATED)
+        except Exception as e:
+            return Response(str(e),status=status.HTTP_400_BAD_REQUEST)
+        #   return Response("hello from post")
+    
+    def get(self,request,pk=None):
+        if pk:
+            try:
+                product=models.Products.objects.get(pk=pk)
+                serializer=serializers.ProductFullSerializer(product,context={'request':request})
+                return Response(serializer.data,status=status.HTTP_200_OK)
+            except models.Products.DoesNotExist:
+                return Response({"detail":"Product Not Found"},status=status.HTTP_404_NOT_FOUND)
+        products=models.Products.objects.all()
+        serializer=serializers.ProductSerializer(products,many=True,context={'request':request})
+        # save my product before deleting it 
+        with open('mini_product_file.py','w') as wr:
+            wr.write("[\n")
+            for x in serializer.data:
+                x.pop('url')
+                wr.write(f"    {x},\n")
+            wr.write("]\n")
+        return Response(serializer.data)
     
 class CartItemListView(generics.ListCreateAPIView):
     queryset=models.CartItem.objects.all()
@@ -224,7 +252,7 @@ class OrderHistoryView(generics.ListAPIView):
         return Response(serializer.data)
 
 
-class SearchView(BaseSearchView):
+class SearchView(generics.ListAPIView):
     queryset=models.Products.objects.all()
     serializer_class=serializers.ProductSerializer
 
@@ -273,3 +301,6 @@ class SendVerification(APIView):
 # updated_at:2025-09-02T20:55:05.946888Z
 # owner:techhub@example.com
 # sku:life is good
+
+
+# specs:{"Display":"6.7 Super Retina XDR OLED, 120Hz","Processor":"A17 Pro chip","Storage":"256GB/512/1TB","Camera":"48MP main 12MP ultra wide, 12MP telephoto","Battery":"2000mAh","OS":iOS 17"}

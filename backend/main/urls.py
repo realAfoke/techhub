@@ -12,8 +12,9 @@ urlpatterns=[
     path('cart-item/add/',views.CartItemListView.as_view(),name='cart-list'),
     path('cart-item/view/<uuid:cart_id>/',views.ViewCart.as_view(),name="view-cart"),
     path('cart-item/edit/<int:pk>/',views.ItemDetailView.as_view(),name='cartitem-detail'),
-    path('product/add/',views.ProductsListView.as_view(),name='product-view'),
-    path('product/edit/<int:pk>/',views.ProductDetailView.as_view(),name="products-detail"),
+    path('product/add/',views.ProductView.as_view(),name='product-add'),
+    path('product/<int:pk>/',views.ProductView.as_view(),name='products-detail'),
+    path('product/listing/',views.ProductView.as_view(),name='products-detail'),
     path('brands/add/',views.BrandListView.as_view(),name="brand-view"),
     path('checkout/cart/<uuid:cart_id>/',views.CheckOutView.as_view(),name="checkout-view"),
     path('place-order/',views.PlaceOrderView.as_view(),name='place-order-view'),
@@ -21,7 +22,7 @@ urlpatterns=[
     path('search/',views.SearchView.as_view(),name='searvh-view'),
     path('verify-email/<uuid:token>/',views.EmailVerificationView.as_view(),name='email-verif'),
     path('send-verification/',views.SendVerification.as_view(),name='send-verif'),
-    # path('payment',views.)
+    path('categories/<int:pk>/',views.CategoriesDetailView.as_view(),name="categories-detail")
    
 ]
 

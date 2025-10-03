@@ -98,7 +98,7 @@ class User(AbstractBaseUser,PermissionsMixin):
     
 class Categories(models.Model):
     name=models.CharField(max_length=200)
-    slug=models.SlugField()
+    slug=models.SlugField(unique=True,blank=True)
     description=models.TextField()
     is_active=models.BooleanField(default=True)
     sort_order=models.IntegerField()
@@ -110,7 +110,8 @@ class Categories(models.Model):
 
     def save(self,*args,**kwargs):
         if not self.slug:
-            self.slug=slugify(self.name)
+            new_slug=slugify(self.name)
+            self.slug=new_slug
         return super().save(*args,**kwargs)
 
     def __str__(self):
@@ -118,11 +119,11 @@ class Categories(models.Model):
 
 class Brands(models.Model):
     name=models.CharField(max_length=200)
-    slug=models.SlugField()
-    description=models.TextField()
+    slug=models.SlugField(unique=True,blank=True)
+    description=models.TextField(null=True,blank=True)
     is_active=models.BooleanField(default=True)
-    website=models.CharField(max_length=200,null=True)
-    country=models.CharField(max_length=200)
+    website=models.CharField(max_length=200,null=True,blank=True)
+    country=models.CharField(max_length=200,null=True,blank=True)
     created_at=models.DateTimeField(auto_now_add=True)
     updated_at=models.DateTimeField(auto_now=True)
 
@@ -131,7 +132,13 @@ class Brands(models.Model):
 
     def save(self,*args,**kwargs):
         if not self.slug:
-            self.slug=slugify(self.name)
+            new_slug=slugify(self.name)
+            base_slug=new_slug
+            counter=1
+            while self.__class__.objects.filter(slug=new_slug).exists():
+                new_slug=f"{base_slug}-{counter}"
+                counter +=1
+            self.slug=new_slug
         return super().save(*args,**kwargs)
     
     def __str__(self):
@@ -140,7 +147,7 @@ class Brands(models.Model):
 
 class Products(models.Model):
     name=models.CharField(max_length=200)
-    slug=models.SlugField()
+    slug=models.SlugField(null=True,blank=True)
     description=models.TextField()
     price=models.DecimalField(max_digits=10,decimal_places=2)
     current_price=models.DecimalField(max_digits=10,decimal_places=2)
@@ -150,7 +157,7 @@ class Products(models.Model):
     is_active=models.BooleanField(default=True)
     is_featured=models.BooleanField()
     category=models.ForeignKey(Categories,related_name="product",on_delete=models.PROTECT)
-    brand=models.ForeignKey(Brands,related_name="product",on_delete=models.PROTECT)
+    brand=models.ForeignKey(Brands,related_name="product",on_delete=models.SET_NULL,null=True,blank=True)
     owner=models.ForeignKey(User,related_name="product_item",on_delete=models.CASCADE,default=1)
     created_at=models.DateTimeField(auto_now_add=True)
     updated_at=models.DateTimeField(auto_now=True)
@@ -159,7 +166,13 @@ class Products(models.Model):
 
     def save(self,*args,**kwargs):
         if not (self.slug or self.current_price):
-            self.slug=slugify(self.name)
+            new_slug=slugify(self.name)
+            base_slug=new_slug
+            counter=1
+            while self.__class__.objects.filter(slug=new_slug).exists():
+                new_slug=f"{base_slug}-{counter}"
+                counter +=1
+            self.slug=new_slug
             self.current_price=self.price
         return super().save(*args,**kwargs)
 
@@ -168,10 +181,10 @@ class Products(models.Model):
     
 
 class ProductImage(models.Model):
-    image=models.ImageField()
-    alt_text=models.CharField(max_length=200)
-    is_main_imagge=models.BooleanField()
-    sort_order=models.IntegerField()
+    image=models.ImageField(upload_to="products/",null=True,blank=True)
+    alt=models.CharField(max_length=200,null=True,blank=True)
+    is_main_image=models.BooleanField(default=False)
+    sort_order=models.IntegerField(null=True,blank=True)
     created_at=models.DateTimeField(auto_now_add=True)
     product=models.ForeignKey(Products,related_name='product_image',on_delete=models.CASCADE)
 
@@ -179,7 +192,7 @@ class ProductImage(models.Model):
         db_table='productimage'
 
     def __str__(self):
-        return self.product
+        return self.product.name
     
 
 class Cart(models.Model):

@@ -5,4 +5,5 @@ from . import models
 admin.site.register(models.Categories)
 admin.site.register(models.Brands)
 admin.site.register(models.Products)
+admin.site.register(models.ProductImage)
 admin.site.register(models.User)
