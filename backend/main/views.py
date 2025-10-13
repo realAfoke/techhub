@@ -28,6 +28,7 @@ from rest_framework.request import Request
 from pprint import pprint
 from django.contrib.auth.views import PasswordResetView
 import json
+from django.contrib.auth.models import AnonymousUser
 
 User=get_user_model()
 
@@ -100,18 +101,29 @@ class CategoriesDetailView(generics.RetrieveUpdateDestroyAPIView):
     serializer_class=serializers.CategoriesSerializer
 
 
-# class BaseSearchView(generics.ListAPIView):
-#     def filter(self,request):
-#         queryset=self.get_queryset()
-#         params=dict(self.request.query_params)
-#         search_params=Q() 
-#         for k,v in params.items(): 
-#             search_params |= Q(**{f"{k}__icontains":v}) 
-#         return queryset.filter(search_params)
-#     def list(self, request, *args, **kwargs):
-#         queryset=self.filter(request)
-#         serializer=self.get_serializer(queryset,many=True)
-#         return Response(serializer.data)
+class SearchView(generics.ListAPIView):
+    queryset=models.Products.objects.all()
+    serializer_class=serializers.ProductSerializer
+    
+    def list(self, request, *args, **kwargs):
+        print(request.query_params)
+        query=self.get_queryset()
+        q_object=Q()
+        search_params=dict(request.query_params)
+        print(search_params)
+        if not search_params.get('name'):
+            for k,v in search_params.items():
+                if k == 'price':
+                    q_object &=Q(**{f"{k}__gt":v[0]})
+                else:
+                    q_object &=Q(**{f"{k}__in":v[0].split(",")})
+        else:
+            for k,v in search_params.items():
+                q_object |=Q( **{f"{k}__icontains":v[0]})
+        products=query.filter(q_object)
+        serializer=self.get_serializer(products,many=True)
+        return Response(serializer.data)
+        
     
 
 class BrandListView(generics.ListCreateAPIView):
@@ -124,7 +136,6 @@ class ProductView(APIView):
     permission_classes=[permissions.IsAuthenticatedOrReadOnly,IsOwner]
     def post(self,request):
         products=request.data
-        print(products)
         try:
             for product in products:
                 serializer=serializers.ProductFullSerializer(data=product,context={'request':request})
@@ -134,9 +145,9 @@ class ProductView(APIView):
             return Response(serializer.data,status=status.HTTP_201_CREATED)
         except Exception as e:
             return Response(str(e),status=status.HTTP_400_BAD_REQUEST)
-        #   return Response("hello from post")
     
     def get(self,request,pk=None):
+        print(request.query_params)
         if pk:
             try:
                 product=models.Products.objects.get(pk=pk)
@@ -146,36 +157,59 @@ class ProductView(APIView):
                 return Response({"detail":"Product Not Found"},status=status.HTTP_404_NOT_FOUND)
         products=models.Products.objects.all()
         serializer=serializers.ProductSerializer(products,many=True,context={'request':request})
-        # save my product before deleting it 
-        with open('mini_product_file.py','w') as wr:
-            wr.write("[\n")
-            for x in serializer.data:
-                x.pop('url')
-                wr.write(f"    {x},\n")
-            wr.write("]\n")
         return Response(serializer.data)
     
-class CartItemListView(generics.ListCreateAPIView):
-    queryset=models.CartItem.objects.all()
-    serializer_class=serializers.CartItemSerializer
+class CartView(generics.ListCreateAPIView):
+    queryset=models.Cart.objects.all()
+    serializer_class=serializers.CartSerializer
     permission_classes=[permissions.AllowAny]
 
     def perform_create(self, serializer):
-        print('hi')
-        qs=dict(self.request.data)
-        serializer.save(owner_type=str(self.request.user) if self.request.user.is_authenticated else 'AnonymousUser',expiry=timedelta(days=365) if self.request.user.is_authenticated else timedelta(days=30),cart_id=qs['cart_id'][0])
+        qs=self.request.data
+        cart_id=qs.get('cart_id')
+        serializer.save(owner_type=self.request.user,expiry=timedelta(days=365) if self.request.user.is_authenticated else timedelta(days=30),carts=qs.get('carts'),cart_id=cart_id)
+    def list(self, request, *args, **kwargs):
+        data=request.query_params
+        cart_id=data.get('cart_id')
+        query=self.get_queryset()
+        try:
+            carts=query.get(cart_id=cart_id)
+        except models.Cart.DoesNotExist:
+            return Response({"error":"Cart Not Found"},status=status.HTTP_404_NOT_FOUND)
 
-class ViewCart(generics.ListCreateAPIView):
+        serializer=self.get_serializer(carts)
+        return Response(serializer.data)
+
+class UpdateEditCartView(generics.RetrieveUpdateDestroyAPIView):
     queryset=models.Cart.objects.all()
     serializer_class=serializers.CartSerializer
     lookup_field='cart_id'
-    # def get_queryset(self):
-    #     qs=models.CartItem.objects.filter(cart__cart_id=self.kwargs['id'])
-    #     return qs
+    def edit_item(self,request,items):
+        cart=self.get_object()
+        serializer=self.get_serializer(cart,data=request.data,partial=True)
+        if serializer.is_valid(raise_exception=True):
+            serializer.save(items=items)
+            return serializer.data
+
+    def update(self, request, *args, **kwargs):
+        items=request.data
+        return Response(self.edit_item(request,items),status=status.HTTP_200_OK)
+        
+    def delete(self, request, *args, **kwargs):
+        qs=dict(request.query_params)
+        print(qs)
+        carts=self.get_object()
+        item=carts.items.get(id=qs['item_id'][0])
+        item.delete()
+        serializer=self.get_serializer(carts)
+        return Response(serializer.data,status=status.HTTP_200_OK)
+       
+
+
     
-class ItemDetailView(generics.RetrieveUpdateDestroyAPIView):
-    queryset=models.CartItem.objects.all()
-    serializer_class=serializers.CartItemSerializer
+# class ItemDetailView(generics.RetrieveUpdateDestroyAPIView):
+#     queryset=models.CartItem.objects.all()
+#     serializer_class=serializers.CartItemSerializer
     
 class CheckOutView(generics.ListCreateAPIView):
     queryset=models.Cart.objects.all()
@@ -252,9 +286,9 @@ class OrderHistoryView(generics.ListAPIView):
         return Response(serializer.data)
 
 
-class SearchView(generics.ListAPIView):
-    queryset=models.Products.objects.all()
-    serializer_class=serializers.ProductSerializer
+# class SearchView(generics.ListAPIView):
+#     queryset=models.Products.objects.all()
+#     serializer_class=serializers.ProductSerializer
 
 def orderConfirmationEmail(order):
     order=models.Order.objects.get(order_id=order)
@@ -286,21 +320,3 @@ class SendVerification(APIView):
         user.send_verification_email()
         return Response({'msg':'verification email sent'})
     # lookup_field='token'
-# name:samsung
-# slug:samsung
-# description:the best mobile phone in the whole wide world
-# price:200.00
-# current_price:1500000.00
-# specs:{"battery":"20000mah"}
-# stock_quantity:20
-# is_active:true
-# is_featured:false
-# category:5
-# brand:1
-# created_at:2025-09-02T20:55:05.946888Z
-# updated_at:2025-09-02T20:55:05.946888Z
-# owner:techhub@example.com
-# sku:life is good
-
-
-# specs:{"Display":"6.7 Super Retina XDR OLED, 120Hz","Processor":"A17 Pro chip","Storage":"256GB/512/1TB","Camera":"48MP main 12MP ultra wide, 12MP telephoto","Battery":"2000mAh","OS":iOS 17"}

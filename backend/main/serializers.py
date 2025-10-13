@@ -4,6 +4,7 @@ from . models import Categories,Brands,ProductImage,Products,CartItem,Cart,Order
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from uuid import uuid4
 from datetime import datetime
+from django.http.request import QueryDict
 import re
 from django.db.models import Q
 
@@ -21,9 +22,20 @@ class SignUpSerializer(serializers.ModelSerializer):
         user.send_verification_email()
 
         return user   
+    
+class LoginSerializer(TokenObtainPairSerializer):
+    def validate(self, attrs):
+        try:
+            user=User.objects.get(email=attrs['email'])
+        except User.DoesNotExist:
+            raise serializers.ValidationError('invalid input try again')
+        if not user.check_password(attrs['password']):
+            raise serializers.ValidationError('invalid input pls try agian')
+        tokens=self.get_token(user)
+        return{'refresh':str(tokens),'access':str(tokens.access_token)}
 
 class CategoriesSerializer(serializers.HyperlinkedModelSerializer):
-    id=serializers.HyperlinkedIdentityField(view_name='categories-detail')
+    # id=serializers.HyperlinkedIdentityField(view_name='categories-detail')
     slug=serializers.ReadOnlyField()
     class Meta:
         model=Categories
@@ -48,7 +60,7 @@ class ProductFullSerializer(serializers.HyperlinkedModelSerializer):
     owner=serializers.ReadOnlyField(source="owner.email")
     class Meta:
         model=Products
-        fields=['url','name','slug','description','price','current_price','specs','stock_quantity','is_active','is_featured','category','brand','created_at','updated_at','owner','product_image','sku']
+        fields=['id','url','name','slug','description','price','current_price','specs','stock_quantity','is_active','is_featured','category','brand','created_at','updated_at','owner','product_image','sku']
 
     def create(self, validated_data):
         brands=validated_data.get('brand')
@@ -56,7 +68,7 @@ class ProductFullSerializer(serializers.HyperlinkedModelSerializer):
         if brands.get('brand'):
             brand_data=Brands.objects.get(pk=brands['brand'])
             validated_data['brand']=brand_data
-        elif custom_brand.get('name'):
+        elif custom_brand and custom_brand.get('name'):
             brand_data=Brands.objects.create(**custom_brand)
             validated_data['brand']=brand_data
         else:
@@ -90,23 +102,15 @@ class ProductSerializer(serializers.HyperlinkedModelSerializer):
     product_image=ProductImageSerializer(many=True,read_only=True)
     class Meta:
         model=Products
-        fields=['url','name','price','current_price','sku','stock_quantity','product_image']
+        fields=['id','url','name','price','current_price','sku','stock_quantity','product_image']
 
 
-class LoginSerializer(TokenObtainPairSerializer):
-    def validate(self, attrs):
-        try:
-            user=User.objects.get(email=attrs['email'])
-        except User.DoesNotExist:
-            raise serializers.ValidationError('invalid input try again')
-        if not user.check_password(attrs['password']):
-            raise serializers.ValidationError('invalid input pls try agian')
-        tokens=self.get_token(user)
-        return{'refresh':str(tokens),'access':str(tokens.access_token)}
+
+    
 
 class CartItemSerializer(serializers.HyperlinkedModelSerializer):
     cart=serializers.ReadOnlyField(source="cart.cart_id")
-    product=serializers.PrimaryKeyRelatedField(queryset=Products.objects.all())
+    product=ProductSerializer(read_only=True)
     price_when_added=serializers.ReadOnlyField()
     quantity=serializers.IntegerField(default=1)
     total=serializers.ReadOnlyField()
@@ -114,40 +118,63 @@ class CartItemSerializer(serializers.HyperlinkedModelSerializer):
 
     class Meta:
         model=CartItem
-        fields=['id','url','cart','product','price_when_added','quantity','current_price','total']
+        fields=['id','cart','product','price_when_added','quantity','current_price','total']
+        # extra_kwargs={'url':{'view_name':'cart-view','lookup_field':'cart_id'}}
 
-    def create(self, validated_data):
-        if validated_data['cart_id']:
-            instance=Cart.objects.get(cart_id=validated_data['cart_id'])
-            if instance.owner_type == 'AnonymousUser' and validated_data['owner_type'] != 'AnonymousUser':
-                instance.owner_type=validated_data['owner_type']
-                instance.save()
-        else:
-            del validated_data['cart_id']
-        cart,create=Cart.objects.get_or_create(cart_id=validated_data.get("cart_id",str(uuid4())),defaults={"owner_type":validated_data["owner_type"],"expiry":validated_data["expiry"]})
-        cart_item,create=CartItem.objects.update_or_create(cart=cart,product=validated_data['product'],defaults={"product":validated_data['product'],"quantity":validated_data["quantity"],'price_when_added':validated_data['product'].price},current_price=validated_data['product'].current_price,total=validated_data['product'].current_price*validated_data['quantity'])
-
-        return cart_item
     def update(self, instance, validated_data):
-        instance.quantity=validated_data.get('quantity',instance.quantity)
-        instance.save()
-        return instance
+        print(instance)
+        print(validated_data)
     
 class CartSerializer(serializers.ModelSerializer):
     items=CartItemSerializer(many=True,read_only=True)
     total=serializers.SerializerMethodField()
     total_item=serializers.SerializerMethodField()
-    delivery_fee=serializers.SerializerMethodField()
+    # delivery_fee=serializers.SerializerMethodField()
     class Meta:
         model=Cart
-        fields=['id','cart_id','items','total_item','total','delivery_fee']
+        fields=['id','cart_id','items','total_item','total']
+
+    def create(self, validated_data):
+        owner=str(validated_data.get('owner_type'))
+        if owner == 'AnonymousUser':
+            validated_data.pop('owner_type')
+        carts=validated_data.pop('carts')
+        cart_instance,_=Cart.objects.get_or_create(cart_id=validated_data.pop('cart_id') or str(uuid4()),defaults=validated_data)
+        for item in carts:
+            product_instance=Products.objects.get(pk=item.pop('product'))
+            try:
+                cart=CartItem.objects.get(cart=cart_instance,product=product_instance)
+                cart.quantity=item.get('quantity')+1
+                cart.save()
+            except CartItem.DoesNotExist:
+                cart=CartItem.objects.update_or_create(cart=cart_instance,product=product_instance,defaults={"quantity":item.get("quantity"),"price_when_added":product_instance.price,"current_price":product_instance.current_price,"total":product_instance.current_price * item.get("quantity")})
+        return cart_instance
+    
+    def update(self, instance, validated_data):
+        print(validated_data)
+     
+        method=validated_data['items'].pop('type')
+        target=int(validated_data['items'].pop('item_id'))
+        item=instance.items.get(id=target)
+        print(item)
+        if method == 'add' :
+            item.quantity +=1
+            item.save()
+        else:
+            item.quantity -=1
+            item.save()
+        
+        return instance
+    
 
     def get_total(self,obj):
-        return sum([item.total for item in obj.items.all()])
+        return sum([item.quantity*item.current_price for item in obj.items.all()])
     def get_total_item(self,obj):
         return sum( item.quantity for item in obj.items.all())
-    def get_delivery_fee(self,obj):
-        return 750 if self.get_total_item(obj) < 2 else 2250
+    # def get_delivery_fee(self,obj):
+    #     return 750 if self.get_total_item(obj) < 2 else 2250
+    
+
 class OrderItemSerializer(serializers.ModelSerializer):
     product=ProductSerializer()
     class Meta:

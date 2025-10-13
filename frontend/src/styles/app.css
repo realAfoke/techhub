@@ -1,1 +1,19 @@
 @import "tailwindcss";
+
+@layer components {
+  /* .custom-range {
+    appearance: none;
+  } */
+  .custom-range::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    height: 20px;
+    width: 20px;
+    background-color: orange;
+    border-radius: 50%;
+  }
+  /* .custom-range::before {
+    content: "$0";
+    margin: 5px 0;
+    display: inline-block;
+  } */
+}

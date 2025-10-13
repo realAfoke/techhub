@@ -17,6 +17,8 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import path,include
 from main import views
+from django.conf import settings
+from django.conf.urls.static import static
 # from rest_framework_simplejwt.views import TokenRefreshView
 # from rest_framework_simplejwt.views import TokenObtainPairView
 # from main.views import LoginView
@@ -26,6 +28,7 @@ urlpatterns = [
     path("",include('main.urls')),
     # path('api/auth/',include('rest_framework.urls')),
     # path("sign-up/",views.SignUpView.as_view(),name="sign-up-view"),
-    
-
 ]
+
+if settings.DEBUG:
+    urlpatterns +=static(settings.MEDIA_URL,document_root=settings.MEDIA_ROOT)

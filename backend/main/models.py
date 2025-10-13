@@ -165,7 +165,7 @@ class Products(models.Model):
         db_table='products'
 
     def save(self,*args,**kwargs):
-        if not (self.slug or self.current_price):
+        if not self.slug:
             new_slug=slugify(self.name)
             base_slug=new_slug
             counter=1
@@ -173,6 +173,8 @@ class Products(models.Model):
                 new_slug=f"{base_slug}-{counter}"
                 counter +=1
             self.slug=new_slug
+            self.current_price=self.price
+        if not self.current_price:
             self.current_price=self.price
         return super().save(*args,**kwargs)
 
@@ -196,7 +198,7 @@ class ProductImage(models.Model):
     
 
 class Cart(models.Model):
-    owner_type=models.CharField(max_length=255,null=True,blank=True)
+    owner_type=models.ForeignKey(User,related_name='cart',on_delete=models.SET_NULL,null=True,blank=True)
     cart_id=models.UUIDField(null=True,blank=True)
     expiry=models.DurationField(null=True,blank=True)
     created_at=models.DateTimeField(auto_now_add=True,null=True,blank=True)
@@ -212,6 +214,7 @@ class Cart(models.Model):
 
 class CartItem(models.Model):
    cart=models.ForeignKey(Cart,related_name="items",on_delete=models.CASCADE,null=True,blank=True)
+#    address=models.ForeignKey
    product=models.ForeignKey(Products,on_delete=models.CASCADE,null=True,blank=True)
    quantity=models.IntegerField(default=1)
    price_when_added=models.DecimalField(max_digits=10,decimal_places=2,null=True,blank=True)
