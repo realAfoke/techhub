@@ -8,6 +8,7 @@ import App, { appLoader } from "./routes/App";
 import ProductList from "./pages/productList";
 import Cart from "./routes/Cart";
 import Create, { createAction } from "./routes/create";
+import Login, { loginAction } from "./pages/login";
 
 const router = createBrowserRouter([
   {
@@ -20,14 +21,13 @@ const router = createBrowserRouter([
         element: <ProductList />,
       },
       {
-        path: "product/:productId/",
+        path: "product/:productId",
         element: <ProductDetail />,
         loader: productDetailLoader,
       },
       {
-        path: "cart/",
+        path: "cart",
         element: <Cart />,
-        // loader: cartLoader,
       },
     ],
   },
@@ -35,6 +35,11 @@ const router = createBrowserRouter([
     path: "create-account",
     element: <Create />,
     action: createAction,
+  },
+  {
+    path: "login",
+    element: <Login />,
+    action: loginAction,
   },
 ]);
 

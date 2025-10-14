@@ -1,4 +1,4 @@
-from rest_framework import serializers
+from rest_framework import serializers,exceptions
 from django.contrib.auth import get_user_model
 from . models import Categories,Brands,ProductImage,Products,CartItem,Cart,Order,OrderedItem,PaymentMethod,Payment,SavedCard
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
@@ -22,17 +22,41 @@ class SignUpSerializer(serializers.ModelSerializer):
         user.send_verification_email()
 
         return user   
-    
+
 class LoginSerializer(TokenObtainPairSerializer):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['phone']=serializers.CharField(required=False,write_only=True)
+
     def validate(self, attrs):
-        try:
-            user=User.objects.get(email=attrs['email'])
-        except User.DoesNotExist:
-            raise serializers.ValidationError('invalid input try again')
-        if not user.check_password(attrs['password']):
-            raise serializers.ValidationError('invalid input pls try agian')
-        tokens=self.get_token(user)
-        return{'refresh':str(tokens),'access':str(tokens.access_token)}
+        print('hiii')
+        email=attrs.get('email')
+        password=attrs.get('password')
+        phone=attrs.get('phone')
+
+        if not email and not phone:
+            raise exceptions.AuthenticationFailed('Email or Phone is required')
+        
+        if phone:
+            try:
+                user_obj=User.objects.get(phone=phone)
+                email=getattr(user_obj,'email',None)
+            except User.DoesNotExist:
+                raise exceptions.AuthenticationFailed('No active account found')
+        attrs[self.username_field]=email
+        return super().validate(attrs)
+
+
+# class LoginSerializer(TokenObtainPairSerializer):
+#     def validate(self, attrs):
+#         try:
+#             user=User.objects.get(email=attrs['email'])
+#         except User.DoesNotExist:
+#             raise serializers.ValidationError('invalid input try again')
+#         if not user.check_password(attrs['password']):
+#             raise serializers.ValidationError('invalid input pls try agian')
+#         tokens=self.get_token(user)
+#         return{'refresh':str(tokens),'access':str(tokens.access_token)}
 
 class CategoriesSerializer(serializers.HyperlinkedModelSerializer):
     # id=serializers.HyperlinkedIdentityField(view_name='categories-detail')

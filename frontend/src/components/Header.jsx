@@ -51,7 +51,9 @@ export default function Header({
               </Link>
             </div>
             <div className="flex items-center flex-wrap gap-5">
-              <img src={userIcon} alt="" className="h-8" />
+              <Link to="create-account">
+                <img src={userIcon} alt="" className="h-8" />
+              </Link>
               <Link to="/cart/" replace className="relative">
                 <img src={trolley} alt="" className="h-8" />
                 <span

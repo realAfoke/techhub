@@ -38,11 +38,11 @@ class LoginView(TokenObtainPairView):
 class Root(APIView):
     def get(self,request):
         return Response(
-            {   'sign_up':reverse('signup-view',request=request),
-                'add_cart_item':reverse('cart-list',request=request),
-                'add_product':reverse('product-view',request=request),
+            {   'user':reverse('user-view',request=request),
+                # 'add_cart_item':reverse('cart-list',request=request),
+                # 'add_product':reverse('product-view',request=request),
                 'login':reverse('login-view',request=request),
-                'product':reverse('product-view',request=request),
+                # 'product':reverse('product-view',request=request),
                 # 'checkout':reverse('checkout-view',request=request),
             }
         )
@@ -50,6 +50,28 @@ class SignUpView(generics.ListCreateAPIView):
     queryset=User.objects.all()
     serializer_class=serializers.SignUpSerializer
 
+class UserView(generics.RetrieveAPIView):
+    queryset=User.objects.all()
+    serializer_class=serializers.SignUpSerializer
+    lookup_field='email'
+
+    # def retrieve(self, request, *args, **kwargs):
+    #     print(request.query_params)
+    #     email=request.query_params.get('email')
+    #     print(email)
+    #     user_instance=self.get_object()
+    #     print(user_instance)
+    #     serializer=self.get_serializer(user_instance)
+    #     return Response(serializer.data)
+
+class CheckEmail(APIView):
+    def get(self,request):
+        for k,v in request.query_params.items():
+            q_object =Q(**{f"{k}":v[:]})
+        if models.User.objects.filter(q_object).exists():
+            return Response('user exist')
+        else:
+            return Response('user not found')
 
 class PasswordResetView(APIView):
     def post(self,request):
@@ -106,7 +128,6 @@ class SearchView(generics.ListAPIView):
     serializer_class=serializers.ProductSerializer
     
     def list(self, request, *args, **kwargs):
-        print(request.query_params)
         query=self.get_queryset()
         q_object=Q()
         search_params=dict(request.query_params)
