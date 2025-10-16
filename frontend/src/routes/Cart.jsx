@@ -8,7 +8,7 @@ export default function Cart() {
   const { carts, handleCart } = useOutletContext();
   const cartedItem = carts.carts?.items?.map((item) => {
     return (
-      <li key={item.id}>
+      <li key={item.product.name}>
         <Item item={item} handleCart={handleCart} status={carts.status} />
       </li>
     );
@@ -48,21 +48,3 @@ export default function Cart() {
     </>
   );
 }
-
-// export async function cartLoader() {
-//   console.log("hi");
-//   try {
-//     if (localStorage.getItem("cartId") !== null) {
-//       console.log("inside");
-//       const cartId = localStorage.getItem("cartId");
-//       const cart = await api.get(`cart/`, {
-//         params: { cart_id: cartId },
-//       });
-//       console.log(cart);
-//       console.log(cart.data);
-//       return cart.data;
-//     }
-//   } catch (e) {
-//     console.error(e);
-//   }
-// }

@@ -25,11 +25,7 @@ export default function ProductDetail() {
 
   const fullDetail = useLoaderData();
   const [quantity, setQuantity] = useState(1);
-  // const [noOfCartItem, setNoOfCartItem] = useState(
-  //   data.length === 4 ? data[3]?.total_item : 0
-  // );
 
-  // const fullDetail = data[0];
   const image = fullDetail.product_image[0];
   const discount = (
     ((fullDetail?.price - fullDetail?.current_price) / fullDetail.price) *
@@ -142,7 +138,6 @@ export default function ProductDetail() {
                 className="p-4 bg-[orange] text-white rounded-xl flex-2"
                 onClick={async () => {
                   const add = await addToCart(fullDetail.id, quantity);
-                  // setNoOfCartItem(add.total_item);
                 }}
               >
                 Add to Cart

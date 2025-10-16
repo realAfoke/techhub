@@ -29,11 +29,13 @@ from pprint import pprint
 from django.contrib.auth.views import PasswordResetView
 import json
 from django.contrib.auth.models import AnonymousUser
+from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 
 User=get_user_model()
 
 class LoginView(TokenObtainPairView):
     serializer_class=serializers.LoginSerializer
+       
 
 class Root(APIView):
     def get(self,request):
@@ -50,19 +52,17 @@ class SignUpView(generics.ListCreateAPIView):
     queryset=User.objects.all()
     serializer_class=serializers.SignUpSerializer
 
+    # def create(self, request, *args, **kwargs):
+    #     print(request.data)
+    #     return Response('hello')
+
+    # def perform_create(self, serializer):
+    #     print(self.request.data)
+
 class UserView(generics.RetrieveAPIView):
     queryset=User.objects.all()
     serializer_class=serializers.SignUpSerializer
     lookup_field='email'
-
-    # def retrieve(self, request, *args, **kwargs):
-    #     print(request.query_params)
-    #     email=request.query_params.get('email')
-    #     print(email)
-    #     user_instance=self.get_object()
-    #     print(user_instance)
-    #     serializer=self.get_serializer(user_instance)
-    #     return Response(serializer.data)
 
 class CheckEmail(APIView):
     def get(self,request):
@@ -194,7 +194,14 @@ class CartView(generics.ListCreateAPIView):
         cart_id=data.get('cart_id')
         query=self.get_queryset()
         try:
-            carts=query.get(cart_id=cart_id)
+            print(request.user)
+            if request.user.is_authenticated:
+                carts=query.get(owner_type=request.user)
+            else:
+                carts=query.get(cart_id=cart_id)
+            if not carts.owner_type and request.user.is_authenticated:
+                carts.owner_type=request.user
+                carts.save()
         except models.Cart.DoesNotExist:
             return Response({"error":"Cart Not Found"},status=status.HTTP_404_NOT_FOUND)
 
@@ -226,12 +233,6 @@ class UpdateEditCartView(generics.RetrieveUpdateDestroyAPIView):
         return Response(serializer.data,status=status.HTTP_200_OK)
        
 
-
-    
-# class ItemDetailView(generics.RetrieveUpdateDestroyAPIView):
-#     queryset=models.CartItem.objects.all()
-#     serializer_class=serializers.CartItemSerializer
-    
 class CheckOutView(generics.ListCreateAPIView):
     queryset=models.Cart.objects.all()
     serializer_class=serializers.CartSerializer
@@ -249,7 +250,6 @@ def checkout(request,cart_id):
     if request.method == 'GET':
         cart=models.Cart.get(cart_id=cart_id)
         serializer=serializers.CheckOutSerializer(cart,many=True)
-        print(serializer.data)
    
 class PlaceOrderView(generics.CreateAPIView):
     queryset=models.Order.objects.all()

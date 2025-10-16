@@ -12,11 +12,15 @@ from uuid import uuid4
 class CustomUserManager(BaseUserManager):
     use_in_migrations=True
 
-    def create_user(self,email,password=None,**extra_fields):
-        if not email:
-            raise ValueError('Error:email not found')
-        email=self.normalize_email(email)
-        user=self.model(email=email,**extra_fields)
+    def create_user(self,email=None,password=None,phone=None,**extra_fields):
+        if email is None and phone is None:
+            raise ValueError('Error:email or phone not found')
+        
+        if email:
+            email=self.normalize_email(email)
+            user=self.model(email=email,**extra_fields)
+        else:
+            user=self.model(phone=phone,**extra_fields)
         user.set_password(password)
         user.save(using=self._db)
         return user
@@ -41,7 +45,7 @@ class User(AbstractBaseUser,PermissionsMixin):
     first_name=models.CharField(max_length=200)
     # username=models.CharField(max_length=200,unique=True)
     last_name=models.CharField(max_length=200)
-    email=models.EmailField(unique=True)
+    email=models.EmailField(unique=True ,null=True)
     phone=models.CharField(max_length=15)
     is_verified=models.BooleanField(null=True,blank=False,default=False)
     data_joined=models.DateTimeField(auto_now_add=True)
@@ -57,8 +61,7 @@ class User(AbstractBaseUser,PermissionsMixin):
     objects=CustomUserManager()
     
     def __str__(self):
-        return self.email
-    
+        return self.email or 'no email'
     class Meta():
         db_table='usermodel'
 
@@ -223,6 +226,7 @@ class CartItem(models.Model):
 
    class Meta:
        db_table="cartitem"
+       ordering=['product']
     
    def __str__(self):
         return self.product.name

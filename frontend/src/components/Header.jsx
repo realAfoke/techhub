@@ -7,6 +7,7 @@ import { useEffect, useRef, useState } from "react";
 import { api } from "../utils";
 
 export default function Header({
+  isAuthenticated,
   categories,
   brands,
   carts,
@@ -14,6 +15,7 @@ export default function Header({
   handleFilter,
   searchFunc,
   hideSearch,
+  handleAuthentication,
 }) {
   console.log(carts);
   const [menu, setMenu] = useState(false);
@@ -51,9 +53,19 @@ export default function Header({
               </Link>
             </div>
             <div className="flex items-center flex-wrap gap-5">
-              <Link to="create-account">
+              <Link to={isAuthenticated ? "user" : "create-account"}>
                 <img src={userIcon} alt="" className="h-8" />
               </Link>
+              <span
+                onClick={() => {
+                  localStorage.removeItem("refreshToken"),
+                    localStorage.removeItem("acccessToken"),
+                    localStorage.removeItem("cartId");
+                  handleAuthentication(false);
+                }}
+              >
+                Logout
+              </span>
               <Link to="/cart/" replace className="relative">
                 <img src={trolley} alt="" className="h-8" />
                 <span

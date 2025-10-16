@@ -7,7 +7,8 @@ import ProductDetail, { productDetailLoader } from "./pages/productDetail";
 import App, { appLoader } from "./routes/App";
 import ProductList from "./pages/productList";
 import Cart from "./routes/Cart";
-import Create, { createAction } from "./routes/create";
+import Create, { checkAccountAction } from "./routes/create";
+import Password, { createAction } from "./components/Password";
 import Login, { loginAction } from "./pages/login";
 
 const router = createBrowserRouter([
@@ -34,7 +35,10 @@ const router = createBrowserRouter([
   {
     path: "create-account",
     element: <Create />,
-    action: createAction,
+    action: checkAccountAction,
+    children: [
+      { path: "password", element: <Password />, action: createAction },
+    ],
   },
   {
     path: "login",

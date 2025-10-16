@@ -1,10 +1,13 @@
 import { useState, useEffect, act } from "react";
 import logo from "../assets/main-logo.png";
-import { Form, Outlet, redirect } from "react-router-dom";
+import { Form, Outlet, redirect, useLocation } from "react-router-dom";
 import google from "../assets/google.svg";
 import { useActionData } from "react-router-dom";
+import hidden from "../assets/eye-lock.svg";
+import visible from "../assets/eye-see.svg";
 import { api } from "../utils";
 export default function Create() {
+  const location = useLocation();
   const action = useActionData();
   const [emailOrPhone, setEmailOrPhone] = useState({
     value: "",
@@ -23,7 +26,11 @@ export default function Create() {
   }, []);
   return (
     <>
-      <div className="bg-white p-10 px-5">
+      <div
+        className={`bg-white p-10 px-5 ${
+          location.pathname.includes("password") ? "hidden" : "block"
+        }`}
+      >
         <div className="flex justify-center">
           <img src={logo} alt="" className="w-[100px]" />
         </div>
@@ -118,12 +125,12 @@ export default function Create() {
           </div>
         </div>
       </div>
+      <Outlet context={{ emailOrPhone }} />
     </>
   );
 }
 
-export async function createAction({ request }) {
-  console.log("hi");
+export async function checkAccountAction({ request }) {
   const data = await request.formData();
   const userDetail = data.get("emailOrPhone");
   const isPhone = /^[0-9+]+$/.test(userDetail);
@@ -147,6 +154,9 @@ export async function createAction({ request }) {
       userData["type"] = isPhone ? "tel" : "email";
       sessionStorage.setItem("userData", JSON.stringify(userData));
       return redirect("../login");
+    } else {
+      console.log(userData);
+      return redirect("password/");
     }
   } catch (error) {
     console.error(error);

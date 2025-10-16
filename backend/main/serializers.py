@@ -1,5 +1,5 @@
 from rest_framework import serializers,exceptions
-from django.contrib.auth import get_user_model
+from django.contrib.auth import get_user_model,authenticate
 from . models import Categories,Brands,ProductImage,Products,CartItem,Cart,Order,OrderedItem,PaymentMethod,Payment,SavedCard
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from uuid import uuid4
@@ -7,14 +7,19 @@ from datetime import datetime
 from django.http.request import QueryDict
 import re
 from django.db.models import Q
+from rest_framework_simplejwt.tokens import RefreshToken
+from rest_framework_simplejwt.settings import api_settings
+from django.contrib.auth.models import update_last_login
 
 User=get_user_model()
 
 class SignUpSerializer(serializers.ModelSerializer):
     password=serializers.CharField(write_only=True)
+    email=serializers.CharField(required=False,write_only=True)
+    phone=serializers.CharField(required=False,write_only=True)
     class Meta:
         model=User
-        fields=['id','first_name','last_name','email', 'phone','password']
+        fields=['id','email', 'phone','password']
 
     def create(self, validated_data):
         user=User.objects.create_user(**validated_data)
@@ -26,37 +31,34 @@ class SignUpSerializer(serializers.ModelSerializer):
 class LoginSerializer(TokenObtainPairSerializer):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.fields['phone']=serializers.CharField(required=False,write_only=True)
+        self.fields[self.username_field]=serializers.CharField(required=False,write_only=True)
+
+    def authenticate(self,phone=None,email=None,password=None,**kwargs):
+        if phone is None and email is None:
+            return ('No email or Phone number provided')
+        try:
+            if phone:
+                user=User.objects.get(phone=phone)
+            else:
+                user=User.objects.get(email=email)
+        except User.DoesNotExist:
+            return exceptions.AuthenticationFailed( {
+        "no_active_account":("No active account found with the given credentials")
+    })
+
+        if user.check_password(password):
+            return user
 
     def validate(self, attrs):
-        print('hiii')
-        email=attrs.get('email')
-        password=attrs.get('password')
-        phone=attrs.get('phone')
+        self.initial_data['request']=self.context['request']
+        self.user=self.authenticate(**self.initial_data)
+        if self.user is None:
+            return  {
+        "no_active_account":("No active account found with the given credentials")}
 
-        if not email and not phone:
-            raise exceptions.AuthenticationFailed('Email or Phone is required')
-        
-        if phone:
-            try:
-                user_obj=User.objects.get(phone=phone)
-                email=getattr(user_obj,'email',None)
-            except User.DoesNotExist:
-                raise exceptions.AuthenticationFailed('No active account found')
-        attrs[self.username_field]=email
-        return super().validate(attrs)
+        refresh=self.get_token(self.user)
 
-
-# class LoginSerializer(TokenObtainPairSerializer):
-#     def validate(self, attrs):
-#         try:
-#             user=User.objects.get(email=attrs['email'])
-#         except User.DoesNotExist:
-#             raise serializers.ValidationError('invalid input try again')
-#         if not user.check_password(attrs['password']):
-#             raise serializers.ValidationError('invalid input pls try agian')
-#         tokens=self.get_token(user)
-#         return{'refresh':str(tokens),'access':str(tokens.access_token)}
+        return {'refresh':str(refresh),'access':str(refresh.access_token)}
 
 class CategoriesSerializer(serializers.HyperlinkedModelSerializer):
     # id=serializers.HyperlinkedIdentityField(view_name='categories-detail')
@@ -175,8 +177,6 @@ class CartSerializer(serializers.ModelSerializer):
         return cart_instance
     
     def update(self, instance, validated_data):
-        print(validated_data)
-     
         method=validated_data['items'].pop('type')
         target=int(validated_data['items'].pop('item_id'))
         item=instance.items.get(id=target)

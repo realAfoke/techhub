@@ -1,11 +1,13 @@
-import ProductList from "../pages/productList";
 import Header from "../components/Header";
 import { useState, useRef, useEffect } from "react";
 import { Outlet, useLoaderData, useLocation } from "react-router-dom";
 import { api } from "../utils";
-// import ProductDetail from "../pages/productDetail";
 
 export default function App() {
+  const [isAuthenticated, setIsAuthenticated] = useState(
+    !!localStorage.getItem("accessToken")
+  );
+
   const location = useLocation();
   const isOutletRendered = location.pathname !== "/";
   const [filteredOrSearcProduct, setFilterereddOrSearchProduct] =
@@ -163,12 +165,12 @@ export default function App() {
           {
             product: params,
             quantity: quantity,
-            // type: "add",
           },
         ],
       });
-      localStorage.setItem("cartId", cart.data.cart_id);
-      console.log(cart.data);
+      if (cartId) {
+        localStorage.setItem("cartId", cart.data.cart_id);
+      }
       setCart((prev) => ({
         ...prev,
         quantity: cart.data.total_item,
@@ -181,6 +183,7 @@ export default function App() {
   return (
     <>
       <Header
+        isAuthenticated={isAuthenticated}
         categories={categories}
         brands={brands}
         carts={carts}
@@ -188,6 +191,7 @@ export default function App() {
         handleFilter={handleFilter}
         searchFunc={searchFunc}
         hideSearch={isOutletRendered}
+        handleAuthentication={setIsAuthenticated}
       />
       <Outlet context={{ products, addToCart, carts, handleCart }} />
     </>
@@ -200,16 +204,17 @@ export async function appLoader() {
       api.get("products/"),
       api.get("categories"),
       api.get("brands"),
+      api.get("cart/", { params: { cart_id: localStorage.getItem("cartId") } }),
     ];
-    if (localStorage.getItem("cartId") !== null) {
-      const cartId = localStorage.getItem("cartId");
-      endpoints.push(api.get(`cart/`, { params: { cart_id: cartId } }));
-    }
     const promises = await Promise.allSettled(endpoints);
     const successfull = [];
     for (const promise of promises) {
       if (promise.status === "fulfilled") {
         successfull.push(promise.value.data);
+        console.log(promise.value.data);
+        if (promise.value.data?.cart_id) {
+          localStorage.setItem("cartId", promise.value.data.cart_id);
+        }
       } else {
         console.error(`Error:Request failed with reason ${promise.reason}`);
       }

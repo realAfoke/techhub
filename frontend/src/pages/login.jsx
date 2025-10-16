@@ -1,12 +1,17 @@
 import logo from "../assets/main-logo.png";
 import { useState, useEffect } from "react";
-import { Form, useNavigate } from "react-router-dom";
+import { Form, redirect, useNavigate, useActionData } from "react-router-dom";
 import hidden from "../assets/eye-lock.svg";
 import visible from "../assets/eye-see.svg";
 import { api } from "../utils";
 export default function Login() {
+  const actionDta = useActionData();
+  console.log(actionDta);
   const navigate = useNavigate();
-  const [userPassword, setUserPassword] = useState("");
+  const [userPassword, setUserPassword] = useState({
+    value: "",
+    error: "",
+  });
   const [userEmailOrPhone, setUserEmailOrPhone] = useState({
     value: "",
     inputState: false,
@@ -15,6 +20,13 @@ export default function Login() {
     visibility: hidden,
     type: "password",
   });
+
+  useEffect(() => {
+    setUserPassword((prev) => ({
+      ...prev,
+      error: actionDta?.no_active_account,
+    }));
+  }, [actionDta]);
 
   useEffect(() => {
     const userData = JSON.parse(sessionStorage.getItem("userData"));
@@ -103,21 +115,33 @@ export default function Login() {
               type={showPassword.type}
               id=""
               name="password"
-              value={userPassword}
-              onChange={(e) => setUserPassword(e.target.value)}
+              value={userPassword.value}
+              onChange={(e) =>
+                setUserPassword((prev) => {
+                  return { ...prev, value: e.target.value, error: "" };
+                })
+              }
               placeholder="Password"
-              className={`p-4  rounded-[6px] font-[600] outline-none w-full border-1 border-black `}
+              className={`p-4  rounded-[6px] font-[600] outline-none w-full border-1 border-black  ${
+                userPassword.error ? "border-red-500" : ""
+              }`}
             />
+            {userPassword.error && (
+              <span className="text-red-500 text-[15px]">
+                {userPassword.error}
+              </span>
+            )}
           </div>
           <div>
             <button
               className={`py-4 bg-[#80808060] font-[700] w-full rounded-[6px] text-[18px] tracking-wider} ${
-                userPassword.length > 0 && userEmailOrPhone.value.length > 0
+                userPassword.value.length > 0 &&
+                userEmailOrPhone.value.length > 0
                   ? "text-white bg-[orange]"
                   : "text-[gray] bg-[#80808060]"
               }`}
               disabled={
-                userPassword.length === 0 || userEmailOrPhone.value === 0
+                userPassword.value.length === 0 || userEmailOrPhone.value === 0
               }
               //   onClick={() => console.log("hi")}
             >
@@ -146,10 +170,20 @@ export default function Login() {
 export async function loginAction({ request }) {
   const data = await request.formData();
   const userData = { password: data.get("password") };
-  userData[/@/.test(data.get("emailOrPhone")) ? "email" : "phone"] =
-    data.get("emailOrPhone");
+  if (/@/.test(data.get("emailOrPhone"))) {
+    userData["email"] = data.get("emailOrPhone");
+  } else {
+    userData["phone"] = data.get("emailOrPhone").slice(4).replaceAll(" ", "");
+  }
   try {
     const login = await api.post("login/", { ...userData });
-    console.log(login.data);
+    if (login.data.access) {
+      sessionStorage.removeItem("userData");
+      localStorage.setItem("accessToken", login.data.access);
+      localStorage.setItem("refreshToken", login.data.refresh);
+      return redirect("/");
+    } else {
+      return login.data;
+    }
   } catch (error) {}
 }

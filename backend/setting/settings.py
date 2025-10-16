@@ -143,6 +143,10 @@ REST_FRAMEWORK={
     ],'DEFAULT_PERMISSION_CLASSES':[]
 }
 
+# AUTHENTICATION_BACKENDS=[
+#     'main.customAuthentication.CustomAuth',
+# ]
+
 EMAIL_BACKEND='django.core.mail.backends.console.EmailBackend'
 
 MEDIA_URL="/media/"
