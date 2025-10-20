@@ -12,6 +12,7 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 
 from pathlib import Path
 from decouple import config
+from datetime import timedelta
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -27,7 +28,9 @@ SECRET_KEY = 'django-insecure-jd6o9nlbg%!a38)fl5wgu3x19=rke)==k2ph26z=3ddo^asvfd
 DEBUG = config('MODE',default=False,cast=bool)
 
 ALLOWED_HOSTS = ['localhost','127.0.0.1']
-CORS_ALLOW_ALL_ORIGINS=True
+CORS_ALLOW_CREDENTIALS=True
+
+CORS_ALLOWED_ORIGINS=['https://localhost:5173','https://127.0.0.1:5173']
 
 
 # Application definition
@@ -35,6 +38,7 @@ CORS_ALLOW_ALL_ORIGINS=True
 INSTALLED_APPS = [
     'corsheaders',
     'main',
+    'django_extensions',
     'rest_framework',
     'django.contrib.admin',
     'django.contrib.auth',
@@ -139,8 +143,19 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 REST_FRAMEWORK={
     'DEFAULT_AUTHENTICATION_CLASSES':[
-        'rest_framework_simplejwt.authentication.JWTAuthentication'
+        # 'rest_framework_simplejwt.authentication.JWTAuthentication'
+        'main.customAuthentication.CustomJWTAuthentication'
     ],'DEFAULT_PERMISSION_CLASSES':[]
+}
+
+SIMPLE_JWT = {
+    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=5),
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=7),
+    'ROTATE_REFRESH_TOKENS': False,
+    'BLACKLIST_AFTER_ROTATION': False,
+    'UPDATE_LAST_LOGIN': False,
+    'ALGORITHM': 'HS256',
+    'SIGNING_KEY': SECRET_KEY,
 }
 
 # AUTHENTICATION_BACKENDS=[

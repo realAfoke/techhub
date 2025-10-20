@@ -16,26 +16,48 @@ from rest_framework.exceptions import ValidationError
 from rest_framework import status
 from django.db import transaction
 from django.db.models import Q
-from asgiref.sync import sync_to_async
 from datetime import datetime
 from uuid import uuid4
 import re
-import time
-from django.contrib.auth.tokens import default_token_generator
-from django.utils.encoding import force_bytes
-from django.utils.http import urlsafe_base64_encode
-from rest_framework.request import Request
 from pprint import pprint
 from django.contrib.auth.views import PasswordResetView
-import json
-from django.contrib.auth.models import AnonymousUser
-from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
+
+
 
 User=get_user_model()
 
 class LoginView(TokenObtainPairView):
     serializer_class=serializers.LoginSerializer
-       
+
+    def post(self, request, *args, **kwargs):
+        token= super().post(request, *args, **kwargs)
+        response=Response({'message':'successfull'})
+        response.set_cookie(
+            key='access',
+            value=str(token.data.get('access')),
+            httponly=True,
+            secure=True,
+            samesite='None',
+            max_age=60*5
+        )
+        response.set_cookie(
+            key='refresh',
+            value=str(token.data.get('refresh')),
+            httponly=True,
+            secure=True,
+            samesite='None',
+            max_age=60*60*24*7
+        )
+        return response
+    
+class LogOutView(APIView):
+    def post(self,request):
+        response=Response({'message':'Logged out successfully'})
+        response.delete_cookie('access')
+        response.delete_cookie('refresh')
+
+        return response 
+
 
 class Root(APIView):
     def get(self,request):
@@ -52,19 +74,17 @@ class SignUpView(generics.ListCreateAPIView):
     queryset=User.objects.all()
     serializer_class=serializers.SignUpSerializer
 
-    # def create(self, request, *args, **kwargs):
-    #     print(request.data)
-    #     return Response('hello')
 
-    # def perform_create(self, serializer):
-    #     print(self.request.data)
+class CurrentUserView(generics.RetrieveAPIView):
+    serializer_class=serializers.UserSerializer
+    permission_classes=[permissions.IsAuthenticated]
 
-class UserView(generics.RetrieveAPIView):
-    queryset=User.objects.all()
-    serializer_class=serializers.SignUpSerializer
-    lookup_field='email'
+    def get_object(self):
+        return self.request.user
 
-class CheckEmail(APIView):
+
+
+class CheckUser(APIView):
     def get(self,request):
         for k,v in request.query_params.items():
             q_object =Q(**{f"{k}":v[:]})
@@ -131,7 +151,6 @@ class SearchView(generics.ListAPIView):
         query=self.get_queryset()
         q_object=Q()
         search_params=dict(request.query_params)
-        print(search_params)
         if not search_params.get('name'):
             for k,v in search_params.items():
                 if k == 'price':
@@ -168,7 +187,6 @@ class ProductView(APIView):
             return Response(str(e),status=status.HTTP_400_BAD_REQUEST)
     
     def get(self,request,pk=None):
-        print(request.query_params)
         if pk:
             try:
                 product=models.Products.objects.get(pk=pk)
@@ -178,7 +196,12 @@ class ProductView(APIView):
                 return Response({"detail":"Product Not Found"},status=status.HTTP_404_NOT_FOUND)
         products=models.Products.objects.all()
         serializer=serializers.ProductSerializer(products,many=True,context={'request':request})
-        return Response(serializer.data)
+        data=serializer.data.copy()
+        if request.user.is_authenticated:
+            data.append({'auth':True})
+        else:
+            data.append({'auth':False})
+        return Response(data)
     
 class CartView(generics.ListCreateAPIView):
     queryset=models.Cart.objects.all()
@@ -188,22 +211,28 @@ class CartView(generics.ListCreateAPIView):
     def perform_create(self, serializer):
         qs=self.request.data
         cart_id=qs.get('cart_id')
-        serializer.save(owner_type=self.request.user,expiry=timedelta(days=365) if self.request.user.is_authenticated else timedelta(days=30),carts=qs.get('carts'),cart_id=cart_id)
+        serializer.save(expiry=timedelta(days=365) if self.request.user.is_authenticated else timedelta(days=30),carts=qs.get('carts'),cart_id=cart_id)
     def list(self, request, *args, **kwargs):
-        data=request.query_params
-        cart_id=data.get('cart_id')
+        cart_id=request.query_params.get('cart_id')
         query=self.get_queryset()
-        try:
-            print(request.user)
-            if request.user.is_authenticated:
-                carts=query.get(owner_type=request.user)
-            else:
-                carts=query.get(cart_id=cart_id)
-            if not carts.owner_type and request.user.is_authenticated:
-                carts.owner_type=request.user
-                carts.save()
-        except models.Cart.DoesNotExist:
-            return Response({"error":"Cart Not Found"},status=status.HTTP_404_NOT_FOUND)
+        anon_cart=query.filter(cart_id=cart_id).first()
+        user=request.user
+        if anon_cart:
+            carts=anon_cart
+        if user.is_authenticated:
+            existing_cart=query.filter(owner_type=user).first()
+            if existing_cart and anon_cart:
+                for item in anon_cart.items.all():
+                    item.cart=existing_cart
+                    item.save()
+                anon_cart.delete()
+                existing_cart.save()
+            carts=existing_cart
+        else:
+            return Response({'message':'Cart is Empty'})        
+        if not carts.owner_type and user.is_authenticated:
+            carts.owner_type=request.user
+            carts.save()
 
         serializer=self.get_serializer(carts)
         return Response(serializer.data)
@@ -294,8 +323,7 @@ class PlaceOrderView(generics.CreateAPIView):
         cart.delete()
         email=models.Order.objects.get(order_id=real_id)
         email.send_pending_mail()
-        # time.s
-        # orderConfirmationEmail(real_id)
+    
         
 class OrderHistoryView(generics.ListAPIView):
     serializer_class=serializers.OrderSerializer
@@ -305,11 +333,6 @@ class OrderHistoryView(generics.ListAPIView):
         queryset=models.Order.objects.filter(user_id=request.user)
         serializer=self.get_serializer(queryset,many=True)
         return Response(serializer.data)
-
-
-# class SearchView(generics.ListAPIView):
-#     queryset=models.Products.objects.all()
-#     serializer_class=serializers.ProductSerializer
 
 def orderConfirmationEmail(order):
     order=models.Order.objects.get(order_id=order)
@@ -341,3 +364,8 @@ class SendVerification(APIView):
         user.send_verification_email()
         return Response({'msg':'verification email sent'})
     # lookup_field='token'
+
+
+class PaymentMethodView(generics.ListCreateAPIView):
+    queryset=models.PaymentMethod.objects.all()
+    serializer_class=serializers.PaymentMethodSerializer

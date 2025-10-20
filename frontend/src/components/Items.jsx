@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { api } from "../utils";
 import { Link } from "react-router-dom";
 
-export default function Item({ item, handleCart, status }) {
+export default function Item({ item, cartId, handleCart, status }) {
   const image = item.product.product_image[0];
   const urlObj = new URL(item.product.url);
   const [itemQuantity, setItemQuantity] = useState(item.quantity);
@@ -23,7 +23,6 @@ export default function Item({ item, handleCart, status }) {
           },
         });
       }
-      // console.log(update.data);
       return update.data;
     } catch (e) {
       console.error(e);
@@ -33,8 +32,8 @@ export default function Item({ item, handleCart, status }) {
   return (
     <>
       <div
-        className={`grid-cols-[100px_1fr] p-3 bg-white mb-3 gap-3 items-center ${
-          status === "deleted" ? "hidden" : "grid"
+        className={`grid-cols-[100px_1fr] p-3 bg-white mb-1 gap-3 items-center ${
+          status.includes(item.id) ? "grid" : "hidden"
         }`}
       >
         <Link to={urlObj.pathname}>
@@ -61,7 +60,7 @@ export default function Item({ item, handleCart, status }) {
                   if (itemQuantity === 1) {
                     return;
                   }
-                  const sub = await updateItem(item.cart, item.id, "sub");
+                  const sub = await updateItem(cartId, item.id, "sub");
                   handleCart({
                     totalItem: sub.total_item,
                     total: sub.total,
@@ -78,7 +77,7 @@ export default function Item({ item, handleCart, status }) {
               <button
                 value={item.id}
                 onClick={async (e) => {
-                  const add = await updateItem(item.cart, item.id, "add");
+                  const add = await updateItem(cartId, item.id, "add");
                   handleCart({
                     totalItem: add.total_item,
                     total: add.total,
@@ -93,12 +92,13 @@ export default function Item({ item, handleCart, status }) {
             <button
               className="text-[orange] px-4"
               onClick={async (e) => {
-                const del = await updateItem(item.cart, item.id, "delete");
+                const del = await updateItem(cartId, item.id, "delete");
                 handleCart({
                   action: "delete",
                   deletedQuantity: itemQuantity,
                   total: del.total,
                   carts: del,
+                  itemId: item.id,
                 });
               }}
             >

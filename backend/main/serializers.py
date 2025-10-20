@@ -10,6 +10,7 @@ from django.db.models import Q
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.settings import api_settings
 from django.contrib.auth.models import update_last_login
+from rest_framework_simplejwt.authentication import JWTAuthentication
 
 User=get_user_model()
 
@@ -27,6 +28,11 @@ class SignUpSerializer(serializers.ModelSerializer):
         user.send_verification_email()
 
         return user   
+    
+class UserSerializer(serializers.ModelSerializer):
+    class Meta:
+        model=User
+        fields=['id','email','first_name','last_name','phone','state','city','address','complete_status']
 
 class LoginSerializer(TokenObtainPairSerializer):
     def __init__(self, *args, **kwargs):
@@ -46,8 +52,9 @@ class LoginSerializer(TokenObtainPairSerializer):
         "no_active_account":("No active account found with the given credentials")
     })
 
-        if user.check_password(password):
-            return user
+        if not user.check_password(password):
+            raise serializers.ValidationError('No active account found with the given credentials')
+        return user
 
     def validate(self, attrs):
         self.initial_data['request']=self.context['request']
@@ -57,7 +64,6 @@ class LoginSerializer(TokenObtainPairSerializer):
         "no_active_account":("No active account found with the given credentials")}
 
         refresh=self.get_token(self.user)
-
         return {'refresh':str(refresh),'access':str(refresh.access_token)}
 
 class CategoriesSerializer(serializers.HyperlinkedModelSerializer):
@@ -126,16 +132,21 @@ class ProductFullSerializer(serializers.HyperlinkedModelSerializer):
 
 class ProductSerializer(serializers.HyperlinkedModelSerializer):
     product_image=ProductImageSerializer(many=True,read_only=True)
+    # auth=serializers.SerializerMethodField()
     class Meta:
         model=Products
         fields=['id','url','name','price','current_price','sku','stock_quantity','product_image']
 
 
+    # def get_auth(self,obj):
+    #     request=self.context.get('request')
+    #     return request.user.is_authenticated if request else False
+
 
     
 
 class CartItemSerializer(serializers.HyperlinkedModelSerializer):
-    cart=serializers.ReadOnlyField(source="cart.cart_id")
+    cart=serializers.ReadOnlyField(source="cart.owner_type.id")
     product=ProductSerializer(read_only=True)
     price_when_added=serializers.ReadOnlyField()
     quantity=serializers.IntegerField(default=1)
@@ -158,14 +169,17 @@ class CartSerializer(serializers.ModelSerializer):
     # delivery_fee=serializers.SerializerMethodField()
     class Meta:
         model=Cart
-        fields=['id','cart_id','items','total_item','total']
+        fields=['id','cart_id','items','total_item','total',]
 
     def create(self, validated_data):
-        owner=str(validated_data.get('owner_type'))
-        if owner == 'AnonymousUser':
-            validated_data.pop('owner_type')
+        request=self.context.get('request')
+        if request.user.is_authenticated:
+            lookup={'owner_type':request.user}
+            validated_data['cart_id']=validated_data.pop('cart_id') or str(uuid4())
+        else:
+            lookup={'cart_id':validated_data.pop('cart_id') or str(uuid4())}
         carts=validated_data.pop('carts')
-        cart_instance,_=Cart.objects.get_or_create(cart_id=validated_data.pop('cart_id') or str(uuid4()),defaults=validated_data)
+        cart_instance,_=Cart.objects.get_or_create(**lookup,defaults=validated_data)
         for item in carts:
             product_instance=Products.objects.get(pk=item.pop('product'))
             try:
@@ -238,10 +252,10 @@ class OrderSerializer(serializers.ModelSerializer):
         return 750 if self.get_total_quantity(obj) <= 2 else 2280
 
 
-# class PaymentMethod(serializers.ModelSerializer):
-#     class Meta:
-#         model=PaymentMethod
-#         fields=['id','code']
+class PaymentMethodSerializer(serializers.ModelSerializer):
+    class Meta:
+        model=PaymentMethod
+        fields="__all__"
 
 
 # class PaymentSeriliazer(serializers.ModelSerializer):

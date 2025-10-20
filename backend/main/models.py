@@ -38,9 +38,6 @@ class CustomUserManager(BaseUserManager):
         return self.create_user(email,password,**extra_fields)
     
 
-        
-        
-
 class User(AbstractBaseUser,PermissionsMixin):
     first_name=models.CharField(max_length=200)
     # username=models.CharField(max_length=200,unique=True)
@@ -54,6 +51,7 @@ class User(AbstractBaseUser,PermissionsMixin):
     address=models.TextField()
     is_active=models.BooleanField(default=True)
     is_staff=models.BooleanField(default=False)
+    complete_status=models.CharField(max_length=20,default='10%')
 
     USERNAME_FIELD='email'
     REQUIRED_FIELDS=[]
@@ -96,6 +94,7 @@ class User(AbstractBaseUser,PermissionsMixin):
             fail_silently=False,
         )
 
+# class AddressBook(models.Model):
 
 
     

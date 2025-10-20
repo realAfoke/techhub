@@ -6,7 +6,6 @@ import visible from "../assets/eye-see.svg";
 import { api } from "../utils";
 export default function Login() {
   const actionDta = useActionData();
-  console.log(actionDta);
   const navigate = useNavigate();
   const [userPassword, setUserPassword] = useState({
     value: "",
@@ -24,7 +23,7 @@ export default function Login() {
   useEffect(() => {
     setUserPassword((prev) => ({
       ...prev,
-      error: actionDta?.no_active_account,
+      error: actionDta?.non_field_errors,
     }));
   }, [actionDta]);
 
@@ -32,7 +31,6 @@ export default function Login() {
     const userData = JSON.parse(sessionStorage.getItem("userData"));
     if (userData) {
       const loginDetail = userData;
-      console.log(loginDetail);
       const realDetail =
         loginDetail.type === "tel"
           ? `+234 ${loginDetail.phone.slice(0, 3)} ${loginDetail.phone.slice(
@@ -177,13 +175,9 @@ export async function loginAction({ request }) {
   }
   try {
     const login = await api.post("login/", { ...userData });
-    if (login.data.access) {
-      sessionStorage.removeItem("userData");
-      localStorage.setItem("accessToken", login.data.access);
-      localStorage.setItem("refreshToken", login.data.refresh);
-      return redirect("/");
-    } else {
-      return login.data;
-    }
-  } catch (error) {}
+    sessionStorage.removeItem("userData");
+    return redirect("/");
+  } catch (error) {
+    return error.response.data;
+  }
 }

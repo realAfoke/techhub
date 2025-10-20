@@ -2,13 +2,13 @@ import React from "react";
 import * as ReactDom from "react-dom/client";
 import "./styles/app.css";
 import { createBrowserRouter, RouterProvider } from "react-router-dom";
-// import { loader } from "./utils";
 import ProductDetail, { productDetailLoader } from "./pages/productDetail";
 import App, { appLoader } from "./routes/App";
 import ProductList from "./pages/productList";
 import Cart from "./routes/Cart";
 import Create, { checkAccountAction } from "./routes/create";
 import Password, { createAction } from "./components/Password";
+import CheckOut, { checkOutLoader } from "./pages/checkout";
 import Login, { loginAction } from "./pages/login";
 
 const router = createBrowserRouter([
@@ -29,6 +29,13 @@ const router = createBrowserRouter([
       {
         path: "cart",
         element: <Cart />,
+        children: [
+          {
+            path: "checkout",
+            element: <CheckOut />,
+            loader: checkOutLoader,
+          },
+        ],
       },
     ],
   },

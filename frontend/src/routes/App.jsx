@@ -4,14 +4,22 @@ import { Outlet, useLoaderData, useLocation } from "react-router-dom";
 import { api } from "../utils";
 
 export default function App() {
-  const [isAuthenticated, setIsAuthenticated] = useState(
-    !!localStorage.getItem("accessToken")
-  );
-
+  const allData = useLoaderData();
+  const categories = allData[1];
+  const brands = allData[2];
   const location = useLocation();
   const isOutletRendered = location.pathname !== "/";
+  const initiaLoadedCart = allData.length === 4 ? allData[3] : "";
   const [filteredOrSearcProduct, setFilterereddOrSearchProduct] =
     useState(false);
+  const products = filteredOrSearcProduct ? filteredOrSearcProduct : allData[0];
+  const { auth } = products[products.length - 1];
+  products.pop();
+  const [isAuthenticated, setIsAuthenticated] = useState(auth);
+  if (isAuthenticated) {
+    localStorage.removeItem("cartId");
+  }
+
   const [filter, setFilter] = useState({
     filters: {
       brand: [],
@@ -22,31 +30,30 @@ export default function App() {
   });
   const filterRef = useRef(filter);
 
-  const allData = useLoaderData();
-  const products = filteredOrSearcProduct ? filteredOrSearcProduct : allData[0];
-  const categories = allData[1];
-  const brands = allData[2];
-  const initiaLoadedCart = allData.length === 4 ? allData[3] : "";
   const quantity = initiaLoadedCart?.total_item
     ? initiaLoadedCart.total_item
     : 0;
   const subTotal = initiaLoadedCart?.total ? initiaLoadedCart.total : 0;
-
+  const activeItemIds = initiaLoadedCart?.items?.map((item) => {
+    return item.id;
+  });
   const [carts, setCart] = useState({
     carts: initiaLoadedCart,
     quantity: quantity,
-    status: "active",
+    status: activeItemIds || [],
     subTotal: subTotal,
   });
 
+  // update cart item quantity or delete cart item from cart function
   function handleCart(value) {
     console.log(value);
     if (value?.action === "delete") {
+      console.log("deleting ....");
       setCart((prev) => {
         return {
           ...prev,
           quantity: prev.quantity - value.deletedQuantity,
-          status: "deleted",
+          status: activeItemIds.filter((a) => a !== value.itemId),
           subTotal: value.total,
           carts: value.carts,
         };
@@ -66,6 +73,8 @@ export default function App() {
     filterRef.current = filter;
   }, [filter]);
 
+  // filter and search function ,
+  ///toggle filter on and off
   function handleFilter(filterData) {
     if (filterData?.reset) {
       setTimeout(async () => {
@@ -168,7 +177,9 @@ export default function App() {
           },
         ],
       });
-      if (cartId) {
+      if (isAuthenticated) {
+        localStorage.removeItem("cartId");
+      } else {
         localStorage.setItem("cartId", cart.data.cart_id);
       }
       setCart((prev) => ({
@@ -182,18 +193,22 @@ export default function App() {
   }
   return (
     <>
-      <Header
-        isAuthenticated={isAuthenticated}
-        categories={categories}
-        brands={brands}
-        carts={carts}
-        filter={filter}
-        handleFilter={handleFilter}
-        searchFunc={searchFunc}
-        hideSearch={isOutletRendered}
-        handleAuthentication={setIsAuthenticated}
-      />
-      <Outlet context={{ products, addToCart, carts, handleCart }} />
+      <div className="bg-[#eeeded]">
+        <Header
+          isAuthenticated={isAuthenticated}
+          categories={categories}
+          brands={brands}
+          carts={carts}
+          filter={filter}
+          handleFilter={handleFilter}
+          searchFunc={searchFunc}
+          hideSearch={isOutletRendered}
+          handleAuthentication={setIsAuthenticated}
+        />
+        <Outlet
+          context={{ products, addToCart, carts, handleCart, isAuthenticated }}
+        />
+      </div>
     </>
   );
 }
@@ -204,14 +219,15 @@ export async function appLoader() {
       api.get("products/"),
       api.get("categories"),
       api.get("brands"),
-      api.get("cart/", { params: { cart_id: localStorage.getItem("cartId") } }),
+      api.get("cart/", {
+        params: { cart_id: localStorage.getItem("cartId") },
+      }),
     ];
     const promises = await Promise.allSettled(endpoints);
     const successfull = [];
     for (const promise of promises) {
       if (promise.status === "fulfilled") {
         successfull.push(promise.value.data);
-        console.log(promise.value.data);
         if (promise.value.data?.cart_id) {
           localStorage.setItem("cartId", promise.value.data.cart_id);
         }

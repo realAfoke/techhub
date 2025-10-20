@@ -5,9 +5,10 @@ from rest_framework_simplejwt.views import TokenRefreshView
 urlpatterns=[
     path('',views.Root.as_view(),name='root-view'),
     path('sign-up/',views.SignUpView.as_view(),name='signup-view'),
-    path('users/',views.UserView.as_view(),name='user-view'),
-    path('check-user/',views.CheckEmail.as_view(),name='checkemail_view'),
+    path('me/',views.CurrentUserView.as_view(),name='user-view'),
+    path('check-user/',views.CheckUser.as_view(),name='checkemail_view'),
     path("login/",views.LoginView.as_view(),name="login-view"),
+    path('logout/',views.LogOutView.as_view(),name='logout-view'),
     path("refresh-token/",TokenRefreshView.as_view(),name="refresh-view"),
     # path('token-refresh/',TokenRefreshView,as_view(),name='refresh-view')
     path("password-reset/",views.PasswordResetView.as_view(),name='reset-view'),
@@ -26,7 +27,8 @@ urlpatterns=[
     path('send-verification/',views.SendVerification.as_view(),name='send-verif'),
     path('categories/<int:pk>/',views.CategoriesDetailView.as_view(),name="categories-detail"),
     path('categories/',views.CategoriesListView.as_view(),name='cat-list'),
-    path('search/',views.SearchView.as_view(),name='search-list')
+    path('search/',views.SearchView.as_view(),name='search-list'),
+    path('payment-method/',views.PaymentMethodView.as_view(),name='paymentmethod-view')
    
 ]
 

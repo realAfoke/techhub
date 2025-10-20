@@ -1,7 +1,7 @@
 import hambuger from "../assets/menu.svg";
 import trolley from "../assets/cart.svg";
 import userIcon from "../assets/user.svg";
-import { Link } from "react-router-dom";
+import { Link, redirect, useNavigate } from "react-router-dom";
 import MenuBar from "./MenuBar";
 import { useEffect, useRef, useState } from "react";
 import { api } from "../utils";
@@ -17,7 +17,7 @@ export default function Header({
   hideSearch,
   handleAuthentication,
 }) {
-  console.log(carts);
+  const navigate = useNavigate();
   const [menu, setMenu] = useState(false);
   let debouncer = useRef(null);
   const searchRef = useRef(filter?.search);
@@ -57,11 +57,19 @@ export default function Header({
                 <img src={userIcon} alt="" className="h-8" />
               </Link>
               <span
-                onClick={() => {
-                  localStorage.removeItem("refreshToken"),
-                    localStorage.removeItem("acccessToken"),
+                onClick={async () => {
+                  try {
+                    const logOut = await api.post(
+                      "logout/",
+                      {},
+                      { withCredentials: true }
+                    );
                     localStorage.removeItem("cartId");
-                  handleAuthentication(false);
+                    handleAuthentication(false);
+                    navigate(".");
+                  } catch (error) {
+                    console.error(error);
+                  }
                 }}
               >
                 Logout
