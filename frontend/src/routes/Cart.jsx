@@ -46,7 +46,7 @@ export default function Cart() {
             }`}
           >
             <Link
-              to={isAuthenticated ? "checkout/" : "/create-account"}
+              to={isAuthenticated ? "/checkout" : "/create-account"}
               className="flex w-full"
             >
               <button className="bg-[orange] text-white outline-none rounded-[5px] font-[500] text-xl py-3 px-5  w-[100%]">
@@ -56,7 +56,7 @@ export default function Cart() {
           </div>
         </div>
       )}
-      <Outlet context={{ carts, isAuthenticated }} />
+      {/* <Outlet context={{ carts, isAuthenticated }} /> */}
     </>
   );
 }

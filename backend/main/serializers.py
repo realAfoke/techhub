@@ -1,7 +1,7 @@
 from rest_framework import serializers,exceptions
 from django.contrib.auth import get_user_model,authenticate
 from . models import Categories,Brands,ProductImage,Products,CartItem,Cart,Order,OrderedItem,PaymentMethod,Payment,SavedCard
-from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
+from rest_framework_simplejwt.serializers import TokenObtainPairSerializer,TokenRefreshSerializer
 from uuid import uuid4
 from datetime import datetime
 from django.http.request import QueryDict
@@ -30,9 +30,20 @@ class SignUpSerializer(serializers.ModelSerializer):
         return user   
     
 class UserSerializer(serializers.ModelSerializer):
+    profile_complete_status=serializers.SerializerMethodField()
     class Meta:
         model=User
-        fields=['id','email','first_name','last_name','phone','state','city','address','complete_status']
+        fields=['id','email','first_name','last_name','phone','state','city','address','is_verified','profile_complete_status']
+
+    # def update(self, instance, validated_data):
+    #     # return super().update(instance, validated_data)
+    #     print(validated_data,'update >>>>')
+    #     return instance
+    def get_profile_complete_status(self,obj):
+        return obj.update_user_complete_status()
+    
+
+
 
 class LoginSerializer(TokenObtainPairSerializer):
     def __init__(self, *args, **kwargs):
@@ -158,9 +169,6 @@ class CartItemSerializer(serializers.HyperlinkedModelSerializer):
         fields=['id','cart','product','price_when_added','quantity','current_price','total']
         # extra_kwargs={'url':{'view_name':'cart-view','lookup_field':'cart_id'}}
 
-    def update(self, instance, validated_data):
-        print(instance)
-        print(validated_data)
     
 class CartSerializer(serializers.ModelSerializer):
     items=CartItemSerializer(many=True,read_only=True)
@@ -194,7 +202,6 @@ class CartSerializer(serializers.ModelSerializer):
         method=validated_data['items'].pop('type')
         target=int(validated_data['items'].pop('item_id'))
         item=instance.items.get(id=target)
-        print(item)
         if method == 'add' :
             item.quantity +=1
             item.save()

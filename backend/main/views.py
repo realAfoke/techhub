@@ -10,7 +10,7 @@ from datetime import timedelta
 from django.utils import timezone
 from django.contrib.auth import get_user_model
 from rest_framework import permissions
-from rest_framework_simplejwt.views import TokenObtainPairView
+from rest_framework_simplejwt.views import TokenObtainPairView,TokenRefreshView
 from main.auth_serializer import IsOwner,IsVerified
 from rest_framework.exceptions import ValidationError
 from rest_framework import status
@@ -19,12 +19,32 @@ from django.db.models import Q
 from datetime import datetime
 from uuid import uuid4
 import re
+from rest_framework_simplejwt.exceptions import InvalidToken,TokenError
 from pprint import pprint
 from django.contrib.auth.views import PasswordResetView
 
 
 
 User=get_user_model()
+
+class CustomRefreshTokenView(TokenRefreshView):
+    def post(self, request, *args, **kwargs):
+        serializer=self.get_serializer(data={'refresh':request.COOKIES.get('refresh')})
+        try:
+            serializer.is_valid(raise_exception=True)
+        except TokenError as e:
+            raise InvalidToken(e.args[0])
+        
+        response=Response({'access token refresh'})
+        response.set_cookie(
+            key='access',
+            value=serializer.validated_data.get('access'),
+            samesite='None',
+            secure=True,
+            max_age=60*5,
+            httponly=True
+        )
+        return response
 
 class LoginView(TokenObtainPairView):
     serializer_class=serializers.LoginSerializer
@@ -75,12 +95,19 @@ class SignUpView(generics.ListCreateAPIView):
     serializer_class=serializers.SignUpSerializer
 
 
-class CurrentUserView(generics.RetrieveAPIView):
+class CurrentUserView(generics.RetrieveUpdateAPIView):
     serializer_class=serializers.UserSerializer
     permission_classes=[permissions.IsAuthenticated]
 
+    # def update(self, request, *args, **kwargs):
+    #     instance=request.user
+    #     serializer=self.get_serializer(instance,data=request.data,partial=partial)
+    #     if serializer.is_valid(raise_exception=True):
+    #         serializer.save(instance)
+
     def get_object(self):
         return self.request.user
+
 
 
 
@@ -362,6 +389,7 @@ class SendVerification(APIView):
     def post(self,request):
         user=request.user
         user.send_verification_email()
+        
         return Response({'msg':'verification email sent'})
     # lookup_field='token'
 

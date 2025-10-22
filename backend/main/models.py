@@ -45,13 +45,12 @@ class User(AbstractBaseUser,PermissionsMixin):
     email=models.EmailField(unique=True ,null=True)
     phone=models.CharField(max_length=15)
     is_verified=models.BooleanField(null=True,blank=False,default=False)
-    data_joined=models.DateTimeField(auto_now_add=True)
+    date_joined=models.DateTimeField(auto_now_add=True)
     state=models.CharField(max_length=200)
     city=models.CharField(max_length=200)
     address=models.TextField()
     is_active=models.BooleanField(default=True)
     is_staff=models.BooleanField(default=False)
-    complete_status=models.CharField(max_length=20,default='10%')
 
     USERNAME_FIELD='email'
     REQUIRED_FIELDS=[]
@@ -93,6 +92,29 @@ class User(AbstractBaseUser,PermissionsMixin):
             recipient_list=[self.email],
             fail_silently=False,
         )
+
+    def update_user_complete_status(self):
+        percent_complete_value=0
+        fields=self._meta.get_fields()
+        for field in fields:
+            if not hasattr(field,'attname'):
+                continue
+            field_name=field.attname
+            
+            if field_name in ['id','complete_status','is_active','is_staff','date_joined','last_login','is_superuser','groups','user_permissions','password']:
+                continue
+
+            value=getattr(self,field_name,None)
+            if value in [None,'',[]]:
+                continue
+        
+            if field_name == 'is_verified' and value == True:
+                percent_complete_value +=30
+            else:
+                percent_complete_value +=10
+        
+        return percent_complete_value
+
 
 # class AddressBook(models.Model):
 

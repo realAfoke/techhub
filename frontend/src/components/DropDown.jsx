@@ -1,19 +1,12 @@
-import { useEffect, useState } from "react";
-export default function DropDown({ DropDownName, values }) {
-  const [option, setOption] = useState({
-    visible: false,
-    value: "",
-  });
-  useEffect(() => {
-    if (!option) {
-      window.addEventListener("click", () => {
-        console.log("hi");
-        console.log("clicked");
-        setOption((prev) => ({ ...prev, visible: false }));
-      });
-    }
-  }, [option]);
-  const allValues = values.map((v) => {
+import { useEffect, useState, useRef } from "react";
+export default function DropDown({
+  DropDownName,
+  options,
+  value,
+  handleOption,
+}) {
+  const optionRef = useRef(null);
+  const allValues = options.map((v) => {
     return (
       <div key={v} className="">
         {v}
@@ -23,24 +16,30 @@ export default function DropDown({ DropDownName, values }) {
   return (
     <>
       <div className={``}>
-        <div className="py-1">{DropDownName}</div>
-        <div
-          className=""
-          onClick={() => setOption((prev) => ({ ...prev, visible: true }))}
+        <div className="py-2">{DropDownName}</div>
+        <span
+          className={` ${
+            value.visible ? "border-none" : "border-1 border-black"
+          }  py-1  px-2 rounded-[5px]`}
+          onClick={() => handleOption((prev) => ({ ...prev, visible: true }))}
         >
-          {option.value || "-----"}
-        </div>
+          {value?.value || "-----"}
+        </span>
         <div
-          className={`overflow-hidden *:hover:bg-[orange] shadow-sm py-2 *:p-1 ${
-            option.visible ? "block max-h-[300px] overflow-scroll" : "hidden"
+          ref={optionRef}
+          className={`overflow-hidden  *:hover:bg-[orange] shadow-sm py-2 *:p-1 ${
+            value?.visible
+              ? "block max-h-[300px] overflow-scroll border-1 border-black"
+              : "hidden"
           }`}
-          onClick={(e) =>
-            setOption((prev) => ({
+          onClick={(e) => {
+            handleOption((prev) => ({
               ...prev,
-              visible: false,
+              visible: !prev.visible,
               value: e.target.textContent,
-            }))
-          }
+              city: e.target.textContent,
+            }));
+          }}
         >
           {allValues}
         </div>

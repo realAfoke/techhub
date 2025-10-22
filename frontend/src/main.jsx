@@ -29,15 +29,14 @@ const router = createBrowserRouter([
       {
         path: "cart",
         element: <Cart />,
-        children: [
-          {
-            path: "checkout",
-            element: <CheckOut />,
-            loader: checkOutLoader,
-          },
-        ],
+        // children: [],
       },
     ],
+  },
+  {
+    path: "checkout",
+    element: <CheckOut />,
+    loader: checkOutLoader,
   },
   {
     path: "create-account",

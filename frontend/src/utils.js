@@ -6,6 +6,36 @@ export const api = axios.create({
   headers: { "Content-Type": "application/json" },
   withCredentials: true,
 });
+
+let isRefreshing = false;
+api.interceptors.response.use(
+  (response) => response,
+  async (error) => {
+    const originalRequest = error.config;
+
+    if (error.response?.status === 401 && !isRefreshing) {
+      isRefreshing = true;
+
+      try {
+        await axios.post("https://localhost:8000/refresh-token/", null, {
+          withCredentials: true,
+        });
+
+        isRefreshing = false;
+
+        return api(originalRequest);
+      } catch (refreshError) {
+        console.error("Refresh token failed:", refreshError);
+        isRefreshing = false;
+        window.location.href = "login";
+        return Promise.reject(refreshError);
+      }
+    }
+
+    return Promise.reject(error);
+  }
+);
+
 export const states = [
   "Abuja",
   "Abia",
@@ -403,7 +433,7 @@ export const cities = [
     ],
   },
   {
-    state: "Federal Capital Territory",
+    state: "Abuja",
     city: [
       "Abuja",
       "Gwarinpa",
