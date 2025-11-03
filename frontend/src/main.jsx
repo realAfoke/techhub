@@ -1,5 +1,6 @@
 import React from "react";
 import * as ReactDom from "react-dom/client";
+<<<<<<< HEAD
 import "./styles/app.css";
 import { createBrowserRouter, RouterProvider } from "react-router-dom";
 import ProductDetail, { productDetailLoader } from "./pages/productDetail";
@@ -61,11 +62,24 @@ const router = createBrowserRouter([
   },
 ]);
 
+=======
+import { createBrowserRouter, RouterProvider } from "react-router-dom";
+import App, { loader as appLoader } from "./App";
+
+const router = createBrowserRouter([
+  {
+    path: "",
+    element: <App />,
+    loader: appLoader,
+  },
+]);
+>>>>>>> 237ce72a27ab12616fd2bf65c8ebaee74f3281bb
 ReactDom.createRoot(document.getElementById("root")).render(
   <React.StrictMode>
     <RouterProvider router={router} />
   </React.StrictMode>
 );
+<<<<<<< HEAD
 
 // if ("serviceWorker" in navigator) {
 //   window.addEventListener("load", () => {
@@ -77,3 +91,5 @@ ReactDom.createRoot(document.getElementById("root")).render(
 //       );
 //   });
 // }
+=======
+>>>>>>> 237ce72a27ab12616fd2bf65c8ebaee74f3281bb
