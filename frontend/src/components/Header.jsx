@@ -10,14 +10,11 @@ export default function Header({
   categories,
   brands,
   appData,
-  handleAppData,
   filter,
   handleFilter,
   searchFunc,
   hideSearch,
-  handleAuthentication,
 }) {
-  const navigate = useNavigate();
   const [menu, setMenu] = useState(false);
   let debouncer = useRef(null);
   const searchRef = useRef(filter?.search);
@@ -25,15 +22,16 @@ export default function Header({
   useEffect(() => {
     searchRef.current = filter?.search;
   }, [filter?.search]);
+
   return (
-    <>
+    <div className="antialiased">
       <header
-        className={`fixed z-[9999] w-full top-0  flex flex-col  ${
+        className={`fixed z-9999 w-full top-0  flex flex-col  ${
           menu ? "h-full" : ""
         }`}
       >
         <div
-          className={`bg-[orange] py-4 flex flex-col ${
+          className={`bg-orange-300 py-4 flex flex-col ${
             !hideSearch ? "gap-5" : "gap-2"
           }`}
         >
@@ -53,29 +51,26 @@ export default function Header({
               </Link>
             </div>
             <div className="flex items-center flex-wrap gap-5">
-              <Link to={"profile"}>
-                <img src={userIcon} alt="" className="h-8 md:h-6" />
-              </Link>
-              <span
+              <button
                 onClick={async () => {
                   try {
-                    const logOut = await api.post("logout/", {});
-                    localStorage.removeItem("cartId");
-                    handleAppData({ action: "logout" });
-                    navigate(".");
+                    const auth = await api.get("me/");
+                    window.location.href = "profile";
                   } catch (error) {
                     console.error(error);
+                    window.location.href = "/create-account";
                   }
                 }}
               >
-                Logout
-              </span>
+                <img src={userIcon} alt="" className="h-8 md:h-6" />
+              </button>
+
               <Link to="/cart/" replace className="relative">
                 <img src={trolley} alt="" className="h-8 md:h-6" />
                 <span
                   className={` ${
                     appData?.quantity > 0 ? "block" : "hidden"
-                  } text-[orange] bg-white w-[25px] h-[25px]  absolute top-0 mt-[-10px] ml-4 rounded-full text-[13px] md:text-[10px] md:max-w-[20px] md:max-h-[20px] text-center p-0.5 
+                  } text-[orange] bg-white w-[25px] h-[25px]  absolute top-0 ml-4 -mt-2.5 rounded-full text-[13px] md:text-[10px] md:max-w-5 md:max-h-5 text-center p-0.5 
         `}
                 >
                   {appData?.quantity}
@@ -118,6 +113,6 @@ export default function Header({
           )}
         </div>
       </header>
-    </>
+    </div>
   );
 }

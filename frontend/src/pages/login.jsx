@@ -21,9 +21,10 @@ export default function Login() {
   });
 
   useEffect(() => {
+    console.log("errors:", actionDta?.nonFieldErrors[0]);
     setUserPassword((prev) => ({
       ...prev,
-      error: actionDta?.non_field_errors,
+      error: actionDta?.nonFieldErrors[0],
     }));
   }, [actionDta]);
 
@@ -48,16 +49,16 @@ export default function Login() {
   }, []);
   return (
     <>
-      <div className="pt-[5rem] bg-[#ffffff] flex flex-col items-center justify-center">
+      <div className="pt-20 bg-[#ffffff] flex flex-col md:items-center justify-center">
         <div className="flex flex-col items-center gap-1">
           <img
             src={logo}
             alt=""
-            className="w-[100px] md:w-[40px]
+            className="w-[100px] md:w-10
           "
           />
 
-          <h4 className="font-[500] text-[20px] md:text-[16px]">
+          <h4 className="font-medium text-[20px] md:text-[16px]">
             Welcome back
           </h4>
           <span className=" md:text-[12px]">
@@ -101,15 +102,15 @@ export default function Login() {
               className={`p-4 ${
                 userEmailOrPhone.inputState
                   ? "bg-[#80808060] border-none"
-                  : "bg-white border-1 border-gray-200"
-              } rounded-[6px] font-[400] outline-none w-full md:py-2 md:text-[12px]`}
+                  : "bg-white border border-gray-200"
+              } rounded-md font-normal outline-none w-full md:py-2 md:text-[12px]`}
             />
           </div>
           <div className="relative">
             <img
               src={showPassword.visibility}
               alt=""
-              className="w-[25px] absolute right-3 top-4 md:top-2 bg-white bg-white p-1"
+              className="w-[25px] absolute right-3 top-4 md:top-2 bg-white p-1"
               onClick={(e) =>
                 setShowPassword((prev) =>
                   prev.type === "password"

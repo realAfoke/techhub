@@ -13,6 +13,7 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 from pathlib import Path
 from decouple import config
 from datetime import timedelta
+import dj_database_url
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -27,10 +28,10 @@ SECRET_KEY = 'django-insecure-jd6o9nlbg%!a38)fl5wgu3x19=rke)==k2ph26z=3ddo^asvfd
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = config('DEBUG',default=False,cast=bool)
 
-ALLOWED_HOSTS = ['localhost','127.0.0.1','533d09da568c.ngrok-free.app']
+ALLOWED_HOSTS = ['localhost','127.0.0.1','36a27fceada7.ngrok-free.app']
 CORS_ALLOW_CREDENTIALS=True
 
-CORS_ALLOWED_ORIGINS=['https://localhost:5173','https://127.0.0.1:5173','https://533d09da568c.ngrok-free.app']
+CORS_ALLOWED_ORIGINS=['https://localhost:5173','https://127.0.0.1:5173','https://36a27fceada7.ngrok-free.app']
 
 
 # Application definition
@@ -166,6 +167,7 @@ SIMPLE_JWT = {
 # ]
 
 ##FLUTTERWAVE KEYS
+print('hiiiiiii')
 RAVE_PUBLIC_KEY=config('RAVE_PUBLIC_KEY')
 RAVE_SECRET_KEY=config('RAVE_SECRET_KEY')
 RAVE_SECRET_HASH=config('RAVE_SECRET_HASH')

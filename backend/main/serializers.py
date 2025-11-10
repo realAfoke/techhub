@@ -29,22 +29,6 @@ class SignUpSerializer(serializers.ModelSerializer):
         user.send_verification_email()
 
         return user   
-    
-class UserSerializer(serializers.ModelSerializer):
-    profile_complete_status=serializers.SerializerMethodField()
-    class Meta:
-        model=User
-        fields=['id','email','first_name','last_name','phone','state','city','address','is_verified','profile_complete_status']
-
-    # def update(self, instance, validated_data):
-    #     # return super().update(instance, validated_data)
-    #     print(validated_data,'update >>>>')
-    #     return instance
-    def get_profile_complete_status(self,obj):
-        return obj.update_user_complete_status()
-    
-
-
 
 class LoginSerializer(TokenObtainPairSerializer):
     def __init__(self, *args, **kwargs):
@@ -275,18 +259,13 @@ class PaymentMethodSerializer(serializers.ModelSerializer):
         fields="__all__"
 
 
-# class PaymentSeriliazer(serializers.ModelSerializer):
-#     method=serializers.PrimaryKeyRelatedField(queryset=PaymentMethod.objects.all())
-#     order=serializers.PrimaryKeyRelatedField(queryset=Order.objects.all())
-#     amount=serializers.ReadOnlyField()
-#     currency=serializers.ReadOnlyField()
-#     status=serializers.ReadOnlyField()
-#     paystack_reference=serializers.ReadOnlyField()
-#     paystack_response=serializers.ReadOnlyField()
+class ProfileSerializer(serializers.ModelSerializer):
+    profile_complete_status=serializers.SerializerMethodField()
+    order=OrderSerializer(many=True,read_only=True)
+    class Meta:
+        model=User
+        fields=['id','email','first_name','last_name','phone','state','city','address','is_verified','order','profile_complete_status']
 
-#     class Meta:
-#         model=Payment
-#         fields=['id','method','order','amount','currency','status','paystack_reference','paystack_response']
-
-    # def create(self, validated_data):
-        #
+    def get_profile_complete_status(self,obj):
+        return obj.update_user_complete_status()
+    

@@ -1,9 +1,4 @@
-<<<<<<< HEAD
 @import "tailwindcss";
-
-@theme {
-  /* --breakpoint-- */
-}
 
 @layer components {
   /* .custom-range {
@@ -39,6 +34,3 @@
     height: 100vh;
   }
 }
-=======
-@import "tailwindcss";
->>>>>>> 237ce72a27ab12616fd2bf65c8ebaee74f3281bb

@@ -72,7 +72,7 @@ export default function CompleteProfile({
                   }))
                 }
                 placeholder="Enter your first name"
-                className="p-2 outline-none w-full border-b-1 border-black"
+                className="p-2 outline-none w-full border-b border-black"
               />
             </div>
             <div className="flex flex-col gap-3">
@@ -89,7 +89,7 @@ export default function CompleteProfile({
                   }))
                 }
                 placeholder="Enter your last Name"
-                className="p-2 outline-none w-full border-b-1 border-black"
+                className="p-2 outline-none w-full border-b border-black"
               />
             </div>
           </div>
@@ -109,7 +109,7 @@ export default function CompleteProfile({
               </span>
             </div>
             {spinner.status && (
-              <span className="h-[20px] w-[20px] block border-b-1 border-l-1 border-black rounded-full animate-spin absolute right-4"></span>
+              <span className="h-5 w-5 block border-b border-l border-black rounded-full animate-spin absolute right-4"></span>
             )}
             <input
               type="email"
@@ -122,7 +122,7 @@ export default function CompleteProfile({
                   email: e.target.value,
                 }))
               }
-              className="p-2 outline-none w-full border-b-1 border-black"
+              className="p-2 outline-none w-full border-b border-black"
               placeholder="enter your email"
             />
           </div>
@@ -148,7 +148,7 @@ export default function CompleteProfile({
               onChange={(e) =>
                 setFormData((prev) => ({ ...prev, address: e.target.value }))
               }
-              className=" border-1 border-black w-full h-[100px] rounded-[5px] p-3 py-2"
+              className=" border border-black w-full h-[100px] rounded-[5px] p-3 py-2"
             ></textarea>
           </div>
         </form>

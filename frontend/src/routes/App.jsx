@@ -9,7 +9,9 @@ export default function App() {
   const brands = allData[2];
   const location = useLocation();
   const isOutletRendered = location.pathname !== "/";
+  // console.log("all data:", allData);
   const initiaLoadedCart = allData.length === 4 ? allData[3] : "";
+  // console.log("initial cart load:", initiaLoadedCart);
   const [filteredOrSearcProduct, setFilterereddOrSearchProduct] =
     useState(false);
   const productsData = filteredOrSearcProduct
@@ -35,8 +37,7 @@ export default function App() {
   });
 
   useEffect(() => {
-    if (filter.search === "")
-      setFilter((prev) => ({ ...prev, searchError: false }));
+    if (filter.search) setFilter((prev) => ({ ...prev, searchError: false }));
   }, [filter.search]);
   const filterRef = useRef(filter);
 
@@ -52,6 +53,10 @@ export default function App() {
     subTotal: subTotal,
     isAuthenticated: auth,
   });
+
+  // useEffect(() => {
+  //   handleAppData({ action: "logout" });
+  // }, [localStorage.getItem("authentication")]);
 
   // update cart item quantity or delete cart item from cart function
 
@@ -231,7 +236,7 @@ export default function App() {
 
   return (
     <>
-      <div className="bg-[#eeeded]">
+      <div className="bg-[#eeeded] antialiased">
         <Header
           categories={categories}
           brands={brands}
@@ -248,7 +253,6 @@ export default function App() {
             addToCart,
             appData,
             handleAppData,
-            appData,
             filter,
           }}
         />

@@ -37,53 +37,6 @@ from django.http import HttpResponse,JsonResponse
 
 User=get_user_model()
 
-# @api_view(['POST'])
-# def flutterwave_webhook(request):
-#     if request.method == 'POST':
-#         print('from  flutter wave webhook')
-#         print('header:',request.headers)
-#         print('headers verification hash:',request.headers.get('verif-hash'))
-#         pprint(request.data)
-
-# def payment(request):
-#     rave=Rave(settings.RAVE_PUBLIC_KEY,settings.RAVE_SECRET_KEY,usingEnv=False)
-#     try:
-#         payload = {
-#         "cardno": "5531886652142950",       # Flutterwave test card
-#         "cvv": "564",
-#         "suggested_auth":"PIN",
-#         "pin":"3310",
-#         "expirymonth": "09",
-#         "expiryyear": "32",
-#         "amount": 1000,
-#         "email": "user@example.com",
-#         "phonenumber": "09000000000",
-#         "firstname": "John",
-#         "lastname": "Doe",
-#         "IP": "127.0.0.1",
-#         "txRef":"MC-"+ Misc.generateTransactionReference()
-#         }
-#         res=rave.Card.charge(payload)
-#         print('Step 1 (Charge Response):',res)
-
-#         if res.get('validationRequired'):
-#             flwRef=res.get('flwRef')
-#             res=rave.Card.validate(flwRef,'12345')
-
-#             print('Step 2 (OTP Validation):',res)
-
-
-#         verify=rave.Card.verify(res['txRef'])
-#         print('Step 3 (Verification):',verify)
-#     except RaveExceptions.CardChargeError as e:
-#         print(e.err['errMsg'])
-#         print(e.err['flwRef'])
-#     except RaveExceptions.TransactionVerificationError as e:
-#             print(e.err['errMsg'])
-#             print(e.err['txRef'])
-#     except RaveExceptions.IncompletePaymentDetailsError as e:
-#             print(e.err)
-
 class CustomRefreshTokenView(TokenRefreshView):
     def post(self, request, *args, **kwargs):
         serializer=self.get_serializer(data={'refresh':request.COOKIES.get('refresh')})
@@ -156,7 +109,7 @@ class SignUpView(generics.ListCreateAPIView):
 
 
 class CurrentUserView(generics.RetrieveUpdateAPIView):
-    serializer_class=serializers.UserSerializer
+    serializer_class=serializers.ProfileSerializer
     permission_classes=[permissions.IsAuthenticated]
 
     # def partial_update(self, request, *args, **kwargs):
@@ -207,6 +160,26 @@ class PasswordResetConfirmView(APIView):
             return Response({'mssg':'passwod reset successful login with your new password'})
         except models.PasswordResetToken.DoesNotExist:
             return Response({'mssg':'link expired'})
+
+@api_view(['PUT','PATCH'])
+@permission_classes([permissions.IsAuthenticated])
+def password_update(request,pk):
+    if request.method == 'PUT' or request .method == 'PATCH':
+        try:
+            user=models.User.objects.get(id=pk)
+        except models.User.DoesNotExist:
+            return Response({"message":'user does not exit'})
+        password_check=user.check_password(request.data.get('current_password'))
+        if not password_check:
+            raise ValidationError('current password incorrect')
+        user.set_password(request.data.get('new_password'))
+        user.save()
+
+        return Response({'message':'password change successfully'})
+
+
+# class PasswordChangeView(generics.UpdateAPIView):
+
 
 
 class CategoriesListView(generics.ListCreateAPIView):
@@ -301,7 +274,7 @@ class CartView(generics.ListCreateAPIView):
              return Response({'message':'Cart is Empty'})     
         if anon_cart:
             carts=anon_cart
-        elif user.is_authenticated :
+        if user.is_authenticated:
             existing_cart=query.filter(owner_type=user).first()
             if existing_cart and anon_cart:
                 for item in anon_cart.items.all():
@@ -310,8 +283,10 @@ class CartView(generics.ListCreateAPIView):
                 anon_cart.delete()
                 existing_cart.save()
                 carts=existing_cart
-            else:
+            elif existing_cart:
                 carts=existing_cart
+            else:
+                carts=anon_cart
             if not carts.owner_type:
                 carts.owner_type=request.user
                 carts.save()   

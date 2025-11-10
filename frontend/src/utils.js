@@ -1,5 +1,7 @@
 import axios from "axios";
 import applyCaseMiddleware from "axios-case-converter";
+import { redirect } from "react-router-dom";
+
 
 export const api = applyCaseMiddleware(
   axios.create({
@@ -26,14 +28,13 @@ api.interceptors.response.use(
             withCredentials: true,
           }
         );
-
         isRefreshing = false;
 
         return api(originalRequest);
       } catch (refreshError) {
         console.error("Refresh token failed:", refreshError);
         isRefreshing = false;
-        window.location.href = "login";
+        window.location.href = "/login";
         return Promise.reject(refreshError);
       }
     }

@@ -47,11 +47,19 @@ export default function Cart() {
               appData.quantity > 0 ? "block" : "hidden"
             }`}
           >
-            <Link to={"/checkout"} className="flex w-full">
-              <button className="bg-[orange] text-white outline-none rounded-[5px] font-[500] text-xl md:text-[16px] py-3 px-5  w-[100%]">
-                Checkout {`($ ${appData.subTotal})`}
-              </button>
-            </Link>
+            <button
+              onClick={async () => {
+                try {
+                  const auth = await api.get("me/");
+                  window.location.href = "/checkout";
+                } catch (error) {
+                  console.error(error);
+                }
+              }}
+              className="bg-[orange] text-white outline-none rounded-[5px] font-medium text-xl md:text-[16px] py-3 px-5  w-full"
+            >
+              Checkout {`($ ${appData.subTotal})`}
+            </button>
           </div>
         </div>
       )}
