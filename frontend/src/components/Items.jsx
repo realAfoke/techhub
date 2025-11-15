@@ -1,5 +1,6 @@
-import { useState, useEffect, useRef } from "react";
+import { useState } from "react";
 import { api } from "../utils";
+import DeleteIcon from "../assets/deleteicon.svg";
 import { Link } from "react-router-dom";
 
 export default function Item({ item, cartId, handleAppData, status }) {
@@ -54,7 +55,7 @@ export default function Item({ item, cartId, handleAppData, status }) {
             )}
           </Link>
           <div className="flex justify-between text-white">
-            <div className="border-1  border-gray-200 *:p-5 *:py-1  rounded-[5px] font-bold bg-[orange] ">
+            <div className="border  border-gray-200 *:p-5 *:py-1  rounded-[5px] font-bold bg-orange-300 ">
               <button
                 onClick={async (e) => {
                   if (itemQuantity === 1) {
@@ -92,7 +93,7 @@ export default function Item({ item, cartId, handleAppData, status }) {
               </button>
             </div>
             <button
-              className="text-[orange] px-4"
+              className="text-orange-300 px-4"
               onClick={async (e) => {
                 const del = await updateItem(cartId, item.id, "delete");
                 handleAppData({
@@ -104,7 +105,7 @@ export default function Item({ item, cartId, handleAppData, status }) {
                 });
               }}
             >
-              del
+              <img src={DeleteIcon} className="w-10 h-10" alt="" />
             </button>
           </div>
         </div>

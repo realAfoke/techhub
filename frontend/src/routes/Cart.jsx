@@ -1,5 +1,6 @@
 import Item from "../components/Items";
 import { api } from "../utils";
+import CartImage from "../assets/cart2.png";
 import { Link, Outlet, useLocation } from "react-router-dom";
 import { useState } from "react";
 import { useOutletContext } from "react-router-dom";
@@ -22,25 +23,30 @@ export default function Cart() {
   return (
     <>
       {!location.pathname.includes("checkout") && (
-        <div className="mt-[4rem] bg-[#f1eaea6c]">
-          <div className=" text-gray-700 px-5 py-4 font-[500] text-[19px] md:text-[14px] tracking-tighter">
+        <div className="mt-16 bg-[#f1eaea6c]">
+          <div className=" text-gray-700 px-5 py-4 font-medium text-[19px] md:text-[14px] tracking-tighter">
             CART SUMMARY
           </div>
-          <div className="bg-white  px-5 py-2 font-[500] flex justify-between items-center">
+          <div className="bg-white  px-5 py-2 font-medium flex justify-between items-center">
             <span className="text-[19px]  md:text-[14px]">subtotal</span>
             <span className="text-[23px]  md:text-[16px]">
               ${appData.subTotal}
             </span>
           </div>
           <div
-            className={`text-gray-700 px-5 py-3 font-[500] text-[19px] tracking-tighter  md:text-[14px]`}
+            className={`text-gray-700 px-5 py-3 font-medium text-[19px] tracking-tighter  md:text-[14px]`}
           >
             CART {appData.quantity > 0 && `(${appData.quantity})`}
           </div>
           {appData.quantity > 0 ? (
             cartedItem
           ) : (
-            <div>you dont have any item in cart </div>
+            <div className="flex gap-2 md:h-60 items-center justify-center flex-col  p-5">
+              <img src={CartImage} alt="" className="w-15 h-15" />
+              <span className="md:text-[12px]">
+                you dont have any item in cart
+              </span>
+            </div>
           )}
           <div
             className={`bg-white p-5 flex items-center mt-5  ${
@@ -56,7 +62,7 @@ export default function Cart() {
                   console.error(error);
                 }
               }}
-              className="bg-[orange] text-white outline-none rounded-[5px] font-medium text-xl md:text-[16px] py-3 px-5  w-full"
+              className="bg-orange-300 text-white outline-none rounded-[5px] font-medium text-xl md:text-[16px] py-3 px-5  w-full"
             >
               Checkout {`($ ${appData.subTotal})`}
             </button>

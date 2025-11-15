@@ -1,18 +1,12 @@
-import {
-  useOutletContext,
-  useLoaderData,
-  useNavigate,
-  redirect,
-} from "react-router-dom";
+import { useLoaderData, useNavigate, Link } from "react-router-dom";
 import { api } from "../utils";
 import { useEffect, useState } from "react";
 import CompleteProfile from "../components/CompleteProfile";
 import ShippingDetail from "../components/ShippingDetail";
-import PaymentMethod from "../components/PaymentMethod";
 import { cities } from "../utils";
+import BackArror from "../assets/back.svg";
 
 export default function CheckOut() {
-  // let { carts, isAuthenticated } = useOutletContext();
   const checkoutData = useLoaderData();
   const userInfo = checkoutData[0];
   const [error, setError] = useState(false);
@@ -46,12 +40,8 @@ export default function CheckOut() {
   }, [option]);
   const paymentMethods = checkoutData[1];
   const carts = checkoutData[2];
+  console.log(carts);
   const navigate = useNavigate();
-  // useEffect(() => {
-  //   if (isAuthenticated === false) {
-  //     navigate("/");
-  //   }
-  // }, [isAuthenticated]);
   const date = new Date();
   const months = [
     "January",
@@ -70,7 +60,7 @@ export default function CheckOut() {
   const deliveryDate = date.getDate();
   const deliveryMonth = months[date.getMonth()];
   const deliveryFee =
-    carts.quantity > 5 ? carts.totalItem * 350 : carts.totalItem * 750;
+    carts?.quantity > 5 ? carts?.totalItem * 350 : carts.totalItem * 750;
 
   async function proccedToPayment() {
     try {
@@ -110,8 +100,10 @@ export default function CheckOut() {
     <div className=" bg-[#f0eded]">
       <div className="bg-white p-5 shadow-sm fixed top-0 w-full">
         <div className="flex gap-5 items-center">
-          <span>back</span>
-          <span className="font-[600] text-[20px] md:text-[16px]">
+          <Link to="/cart">
+            <img src={BackArror} alt="" className="w-5 h-5" />
+          </Link>
+          <span className="font-semibold text-[20px] md:text-[16px]">
             Place your order
           </span>
         </div>
@@ -119,8 +111,8 @@ export default function CheckOut() {
           By proceedin you automatically accepting the Terms & Conditions
         </span>
       </div>
-      <div className="mt-[6rem]">
-        <h3 className="p-5 py-3 font-[500] text-[gray]  md:text-[14px]">
+      <div className="mt-24">
+        <h3 className="p-5 py-3 font-medium text-[gray]  md:text-[14px]">
           ORDER SUMMARY
         </h3>
         <div className="bg-white p-5 py-3 shadow-sm *:py-1">
@@ -128,20 +120,20 @@ export default function CheckOut() {
             <span className=" md:text-[14px]">
               Item's total {`(${carts.totalItem})`}
             </span>
-            <span className="font-[500] text-[20px]  md:text-[16px]">{`$${carts.total}`}</span>
+            <span className="font-medium text-[20px]  md:text-[16px]">{`$${carts.total}`}</span>
           </div>
           <div className=" flex justify-between">
             <span className=" md:text-[14px]">Delivery fees</span>
             <span
-              className="font-[500] text-[18px
+              className="font-medium text-[18px
             ]  md:text-[15px]"
             >
               {`$${deliveryFee}`}
             </span>
           </div>
           <div className="flex justify-between">
-            <span className="font-[600]">Total</span>
-            <span className="font-[600] text-[23px]  md:text-[20px]">
+            <span className="font-semibold">Total</span>
+            <span className="font-semibold text-[23px]  md:text-[20px]">
               ${carts.total + deliveryFee}
             </span>
           </div>
@@ -230,9 +222,9 @@ export default function CheckOut() {
           </div>
         </div>
       </div>
-      <div className="sticky bottom-0 bg-white text-white text-center font-[500] text-[18px]">
+      <div className="sticky bottom-0 bg-white text-white text-center font-medium text-[18px]">
         <button
-          className="bg-[orange] w-full py-3"
+          className="bg-orange-300 w-full py-3"
           onClick={() => proccedToPayment()}
         >
           Proceed to payment
@@ -254,7 +246,7 @@ function CheckOutProducts({ items }) {
           <img
             src={itemImage[0].image}
             alt=""
-            className="w-[150px] h-[80px] md:w-[90px] md:h-[60px]"
+            className="w-[150px] h-20 md:w-[90px] md:h-[60px]"
           />
         </div>
         <div>

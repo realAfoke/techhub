@@ -205,9 +205,7 @@ class CartSerializer(serializers.ModelSerializer):
         return sum([item.quantity*item.current_price for item in obj.items.all()])
     def get_total_item(self,obj):
         return sum( item.quantity for item in obj.items.all())
-    # def get_delivery_fee(self,obj):
-    #     return 750 if self.get_total_item(obj) < 2 else 2250
-    
+
 
 class OrderItemSerializer(serializers.ModelSerializer):
     product=ProductSerializer(read_only=True)
@@ -231,17 +229,12 @@ class OrderSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         items=validated_data.pop('order_item')
-        pprint(items)
         order=Order.objects.create(**validated_data)
         for item in items:
             item['order']=order
             order_item=OrderedItem.objects.create(**item)
 
         return order
-        # order,create=Order.objects.get_or_create(order_id=order_id,defaults={"total_order":sum(item["total"] for item in validated_data["order_item"]),"total_quantity":sum(item["quantity"] for item in validated_data["order_item"]),"shipping_address":validated_data["shipping_address"],"phone":validated_data["phone"],"user":validated_data['user']})      
-        # for item in validated_data["order_item"]:
-        #     order_item=OrderedItem.objects.create(order=order,product=item['product'],quantity=item["quantity"],price=item["price"],total=item["total"])
-        # return order
     
     def get_total_amount(self,obj):
         return sum([item.total for item in obj.order_item.all()])+ self.get_delivery_fee(obj)

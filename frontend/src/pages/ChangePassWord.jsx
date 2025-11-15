@@ -37,16 +37,23 @@ export default function ChangePassword() {
     }
   }
   return (
-    <div className="p-4 py-3 flex flex-col h-full">
-      <section className="shadow-sm p-6 my-5 flex flex-col justify-center gap-2 bg-white rounded-2xl ">
-        <div className="font-semibold text-lg">Change Password</div>
-        <span className="text-sm text-gray-500">
-          Welcom back,{profileInfo.firstName}!
-        </span>
+    <div className="p-4 py-3 flex flex-col h-full md:mt-5">
+      <section className="shadow-sm p-5 md:py-6 mb-2 flex items-center bg-orange-300 text-white rounded-2xl justify-between ">
+        <div className="">
+          <div className="font-semibold text-[16px]">Change Password</div>
+          <div className="text-[12px] text-white">
+            Welcom back,{profileInfo.firstName}!
+          </div>
+        </div>
+        <div className="ring ring-white hidden rounded-md md:flex md:items-center">
+          <span className="text-[12px]  py-2 px-4">Continue Shopping</span>
+        </div>
       </section>
-      <section className="bg-white shadow-sm p-5 rounded-[10px] my-2">
+      <section className="bg-white shadow-sm p-5 rounded-[10px] my-2 md:w-2/3">
         <div className="flex justify-between">
-          <span className="font-semibold">Change Password</span>
+          <span className="font-semibold md:font-normal md:text-[14px]">
+            Change Password
+          </span>
           {userDetail.onSuccess && (
             <span className="text-[10px] text-green-500">
               {userDetail.onSuccess}
@@ -56,7 +63,7 @@ export default function ChangePassword() {
 
         <div action="" className="flex flex-col gap-3 p-1">
           <label htmlFor="firstName">
-            <span className="text-sm text-gray-500 py-2 block">
+            <span className="text-sm text-gray-500 py-2 block md:text-[12px]">
               Current password
             </span>
             <input
@@ -69,7 +76,7 @@ export default function ChangePassword() {
                   currentError: false,
                 }))
               }
-              className="p-2 w-full rounded-[3px] ring ring-gray-300"
+              className="p-2 w-full rounded-[5px] ring ring-gray-300"
             />
             {userDetail.currentError && (
               <span className="text-red-500 text-[10px]">
@@ -78,7 +85,7 @@ export default function ChangePassword() {
             )}
           </label>
           <label htmlFor="lastName">
-            <span className="text-sm text-gray-500 py-2 block">
+            <span className="text-sm text-gray-500 py-2 block md:text-[12px]">
               New password
             </span>
             <input
@@ -91,7 +98,7 @@ export default function ChangePassword() {
                   newPassError: false,
                 }))
               }
-              className="p-2 w-full rounded-[3px] ring ring-gray-300"
+              className="p-2 w-full rounded-[5px] ring ring-gray-300"
             />
             {userDetail.newPassError && (
               <span className="text-red-500 text-[10px]">
@@ -100,7 +107,7 @@ export default function ChangePassword() {
             )}
           </label>
           <label htmlFor="confimPass">
-            <span className="text-sm text-gray-500 py-2 block">
+            <span className="text-sm text-gray-500 py-2 block md:text-[12px]">
               Confirm password
             </span>
             <input
@@ -113,18 +120,20 @@ export default function ChangePassword() {
                   newPassError: false,
                 }))
               }
-              className="p-2 w-full rounded-[3px] ring ring-gray-300"
+              className="p-2 w-full rounded-[5px] ring ring-gray-300"
             />
           </label>
 
           <div className="flex gap-4 my-2">
             <button
-              className="bg-orange-400 p-2 text-center text-white rounded-[5px] "
+              className="bg-orange-400 p-2 text-center md:text-[12px] px-4 text-white rounded-[5px] "
               onClick={async () => passwordUpdate()}
             >
               Updat password
             </button>
-            <button className="text-orange-400">forgot password?</button>
+            <button className="text-orange-400 md:text-[12px]">
+              Forgot password?
+            </button>
           </div>
         </div>
       </section>

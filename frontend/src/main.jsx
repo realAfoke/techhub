@@ -17,6 +17,8 @@ import ProfileOrder from "./pages/ProfileOrders";
 import AccountDetail from "./pages/AccountDetail";
 import Address from "./pages/Address";
 import ChangePassword from "./pages/ChangePassWord";
+import ResetPassword from "./routes/resetPassWord";
+import NewPassword from "./pages/NewPassword";
 
 const router = createBrowserRouter([
   {
@@ -71,6 +73,8 @@ const router = createBrowserRouter([
       { path: "password-change", element: <ChangePassword /> },
     ],
   },
+  { path: "reset-password", element: <ResetPassword /> },
+  { path: "new-password/:tokenId", element: <NewPassword /> },
 ]);
 
 ReactDom.createRoot(document.getElementById("root")).render(
@@ -89,3 +93,32 @@ ReactDom.createRoot(document.getElementById("root")).render(
 //       );
 //   });
 // }
+
+//  <div className="flex gap-3">
+//    <div className="flex justify-between items-center border border-gray-400 rounded-xl flex-1 font-bold p-2">
+//      <button
+//        className="outline-none border-none"
+//        onClick={() => setQuantity((prev) => (prev === 1 ? prev : prev - 1))}
+//      >
+//        -
+//      </button>
+
+//      <span>{quantity}</span>
+
+//      <button
+//        className="outline-none border-none"
+//        onClick={() => setQuantity((prev) => prev + 1)}
+//      >
+//        +
+//      </button>
+//    </div>
+
+//    <button
+//      className="bg-orange-500 text-white rounded-xl flex-2 px-4"
+//      onClick={async () => {
+//        await addToCart(fullDetail.id, quantity);
+//      }}
+//    >
+//      Add to Cart
+//    </button>
+//  </div>;

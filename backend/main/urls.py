@@ -15,7 +15,7 @@ urlpatterns=[
     path("refresh-token/",views.CustomRefreshTokenView.as_view(),name="refresh-view"),
     # path('token-refresh/',TokenRefreshView,as_view(),name='refresh-view')
     path("password-reset/",views.PasswordResetView.as_view(),name='reset-view'),
-    path('reset-password/<uuid:token>/',views.PasswordResetConfirmView.as_view(),name='confrim-view'),
+    path('new-password/<uuid:token>/',views.PasswordResetConfirmView.as_view(),name='confrim-view'),
     # path('password-change/<int:pk>/',views.PasswordChangeView.as_view(),name='passwordchange_view'),
     path('password-update/<int:pk>/',views.password_update,name='passwordupdate_view'),
     path('cart/',views.CartView.as_view(),name='cart-view'),
@@ -37,7 +37,3 @@ urlpatterns=[
     path('payment-initialiser/',views.payment_initialiser,name='paymentinitialiser-view'),
     path('api/flutterwave/webhook/',views.payment_verification,name='flutterwave_webhook')
 ]
-
-
-# if settings.DEBUG:
-#     urlpatterns+=static(settings.MEDIA_URL,document_root=settings.MEDIA_ROOT)

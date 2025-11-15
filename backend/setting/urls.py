@@ -31,4 +31,5 @@ urlpatterns = [
 ]
 
 if settings.DEBUG:
+    print('debug is active 2')
     urlpatterns +=static(settings.MEDIA_URL,document_root=settings.MEDIA_ROOT)

@@ -2,16 +2,17 @@ import { api } from "../utils";
 import hamburger from "../assets/menu.svg";
 import { useLoaderData, Outlet, Link, useNavigate } from "react-router-dom";
 import { useState } from "react";
+import DesktopProfileMenu from "../components/DesktopProfileMenu";
 
 export default function Profile() {
-  const [hideMenu, setHideMenu] = useState(true);
+  const [hideMenu, setHideMenu] = useState(false);
   const profileInfo = useLoaderData();
   const navigate = useNavigate();
   const firstName = profileInfo.firstName;
   const initails = firstName.slice(0, 1);
 
   return (
-    <div className="bg-gray-50 h-screen text-gray-800 antialiased overflow-auto">
+    <div className="bg-[#f5f5f5] h-screen text-gray-800 antialiased overflow-auto md:flex md:gap-5 md:px-15">
       <header className="flex justify-between fixed top-0 w-full p-4 px-6 items-center bg-orange-300 shadow md:hidden">
         <div className="flex gap-5">
           <div>
@@ -87,7 +88,10 @@ export default function Profile() {
           <div className="flex-1" onClick={(e) => setHideMenu(false)}></div>
         </div>
       )}
-      <div className="mt-20">
+      <div className="hidden md:block md:w-3/12">
+        <DesktopProfileMenu initails={initails} profileInfo={profileInfo} />
+      </div>
+      <div className="mt-20 md:mt-0 md:w-9/12">
         <Outlet context={{ profileInfo }} />
       </div>
     </div>

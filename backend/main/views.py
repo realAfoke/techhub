@@ -112,9 +112,6 @@ class CurrentUserView(generics.RetrieveUpdateAPIView):
     serializer_class=serializers.ProfileSerializer
     permission_classes=[permissions.IsAuthenticated]
 
-    # def partial_update(self, request, *args, **kwargs):
-    #     return super().partial_update(request, *args, **kwargs)
-
     def get_object(self):
         return self.request.user
 
@@ -143,20 +140,22 @@ class PasswordResetView(APIView):
             
         except models.User.DoesNotExist:
             pass
-        return Response({'message':'you will get a reset link via the email provided'})
+        return Response({'message':'if an account exists with that email address,we\'ve sent instructions to reset your password.Please check your inbox and follow the link to continue'})
     
 class PasswordResetConfirmView(APIView):
     def post(self,request,*args,**kwargs):
         token=kwargs['token']
-        new_password=request.data.get('new_password')
+        new_password=request.data.get('new_pass_word')
         try:
-            password=models.PasswordResetToken.objects.get(token=token)
-            if not password or password.created < timezone.now()-timedelta(hours=24):
+            reset_token=models.PasswordResetToken.objects.get(token=token)
+            if not reset_token or reset_token.created < timezone.now()-timedelta(hours=24):
                 raise ValidationError('link expired')
-            password.user.set_password(new_password)
-            password.is_used=True
-            password.user.save()
-            password.save()
+            user=reset_token.user
+            user.set_password(new_password)
+            user.save()
+            print('is_changed:',user.check_password(request.data.get('new_password')))
+            reset_token.is_used=True
+            reset_token.save()
             return Response({'mssg':'passwod reset successful login with your new password'})
         except models.PasswordResetToken.DoesNotExist:
             return Response({'mssg':'link expired'})
@@ -242,8 +241,14 @@ class ProductView(APIView):
         if pk:
             try:
                 product=models.Products.objects.get(pk=pk)
+                category=product.category
+                brand=product.brand
+                price=product.price
+                similiar_product=models.Products.objects.filter(Q(category=category) |Q(brand=brand) | Q(price__lt=price) | Q(price__gt=price))
+                similiar_product_serializer=serializers.ProductSerializer(similiar_product,many=True,context={'request':request})
                 serializer=serializers.ProductFullSerializer(product,context={'request':request})
-                return Response(serializer.data,status=status.HTTP_200_OK)
+                response={'product_detail':serializer.data,'similiar_product':similiar_product_serializer.data}
+                return Response(response,status=status.HTTP_200_OK)
             except models.Products.DoesNotExist:
                 return Response({"detail":"Product Not Found"},status=status.HTTP_404_NOT_FOUND)
         products=models.Products.objects.all()
@@ -283,7 +288,7 @@ class CartView(generics.ListCreateAPIView):
                 anon_cart.delete()
                 existing_cart.save()
                 carts=existing_cart
-            elif existing_cart:
+            if existing_cart:
                 carts=existing_cart
             else:
                 carts=anon_cart
@@ -456,24 +461,23 @@ def payment_initialiser(request):
         
     # secret_hash=getattr(settings,'RAVE_SECRET_KEY',None)
     # if secret_hash and secret_hash == request.headers.get('verif-hash'):
-@csrf_exempt
 @api_view(['POST'])
+@csrf_exempt
 def payment_verification(request):
     if request.method == 'POST':
         secret_hash=getattr(settings,'RAVE_SECRET_HASH',None)
-        print('secret_hash:',secret_hash)
         recieve_hash=request.headers.get('verif-hash')
-        print('recieve_hash',recieve_hash)
         if secret_hash != recieve_hash:
             return JsonResponse({'error':'Invalid signature'},status=401)
         data=json.loads(request.body)
-        print('data:',data)
+        pprint({'data hook':data})
         tx_id=data['data']['id']
         verif_url=f'https://api.flutterwave.com/v3/transactions/{tx_id}/verify'
         headers={'Authorization':f'Bearer {settings.RAVE_SECRET_KEY}'}
 
         req=requests.get(verif_url,headers=headers)
         resp=req.json()
+        pprint({'resp hook':resp})
         if resp['status']== 'success':
             cart_id=resp['data']['tx_ref']
             cart=models.Cart.objects.filter(cart_id=cart_id).first()
@@ -497,6 +501,8 @@ def payment_verification(request):
             serializer=serializers.OrderSerializer(data=order_data,context={'request':request})
             if serializer.is_valid(raise_exception=True):
                 serializer.save(user=user,total_order=total_order,total_quantity=total_quantity,order_status='success',order_item=order_item_list)
+                order=models.Order.objects.get(order_id=real_id)
+                order.send_order_confirmation()
                 cart.delete()
                 return Response(serializer.data,status=status.HTTP_200_OK)
             else:
@@ -524,3 +530,64 @@ class PaymentMethodView(generics.ListCreateAPIView):
 # recieve_hash myscretehashisgreatestonime
 # data: {'event': 'charge.completed', 'data': {'id': 9752675, 'tx_ref': 'a5ee1de8-ef1e-4716-9d6d-91bbc9cd563b', 'flw_ref': '1761780414461-FLW-MOCK-REF', 'device_fingerprint': 'N/A', 'amount': 1849, 'currency': 'NGN', 'charged_amount': 1849, 'app_fee': 25.89, 'merchant_fee': 0, 'processor_response': 'Successful', 'auth_model': 'INTERNET_BANKING', 'ip': '52.209.154.143', 'narration': 'Novamart', 'status': 'successful', 'payment_type': 'account', 'created_at': '2025-10-29T23:26:54.000Z', 'account_id': 2643416, 'customer': {'id': 3392393, 'name': 'Novamart', 'phone_number': None, 'email': 'ravesb_302fb78d3ebd31eee302_syntaxmerge88@gmail.com', 'created_at': '2025-10-29T23:26:54.000Z'}, 'account': {'account_name': 'undefined undefined'}}, 'event.type': 'ACCOUNT_TRANSACTION'}
 # RES: {'status': 'success', 'message': 'Transaction fetched successfully', 'data': {'id': 9752675, 'tx_ref': 'a5ee1de8-ef1e-4716-9d6d-91bbc9cd563b', 'flw_ref': '1761780414461-FLW-MOCK-REF', 'device_fingerprint': 'N/A', 'amount': 1849, 'currency': 'NGN', 'charged_amount': 1849, 'app_fee': 25.89, 'merchant_fee': 0, 'processor_response': 'Successful', 'auth_model': 'INTERNET_BANKING', 'ip': '52.209.154.143', 'narration': 'Novamart', 'status': 'successful', 'payment_type': 'account', 'created_at': '2025-10-29T23:26:54.000Z', 'account_id': 2643416, 'meta': {'__CheckoutInitAddress': 'https://checkout-v2.dev-flutterwave.com/v3/hosted/pay'}, 'amount_settled': 1821.16, 'customer': {'id': 3392393, 'name': 'Novamart', 'phone_number': 'N/A', 'email': 'ravesb_302fb78d3ebd31eee302_syntaxmerge88@gmail.com', 'created_at': '2025-10-29T23:26:54.000Z'}}}
+
+
+
+
+
+
+
+# {'data hook': {'data': {'account_id': 2643416,
+#                         'amount': 1849,
+#                         'app_fee': 25.89,
+#                         'auth_model': 'AUTH',
+#                         'charged_amount': 1849,
+#                         'created_at': '2025-11-15T00:24:16.000Z',
+#                         'currency': 'NGN',
+#                         'customer': {'created_at': '2025-10-25T23:26:43.000Z',
+#                                      'email': 'ravesb_302fb78d3ebd31eee302_syntaxmerge88@gmail.com',
+#                                      'id': 3390341,
+#                                      'name': 'Novamart',
+#                                      'phone_number': '08012345678'},
+#                         'device_fingerprint': 'N/A',
+#                         'flw_ref': '2200735871451763166248967',
+#                         'id': 9794225,
+#                         'ip': '52.209.154.143',
+#                         'merchant_fee': 0,
+#                         'narration': 'Novamart',
+#                         'payment_type': 'bank_transfer',
+#                         'processor_response': 'success',
+#                         'status': 'successful',
+#                         'tx_ref': '1f80e427-9aa5-489d-acf5-6dd3c1572b1e'},
+#                'event': 'charge.completed',
+#                'event.type': 'BANK_TRANSFER_TRANSACTION'}}
+# {'resp hook': {'data': {'account_id': 2643416,
+#                         'amount': 1849,
+#                         'amount_settled': 1823.11,
+#                         'app_fee': 25.89,
+#                         'auth_model': 'AUTH',
+#                         'charged_amount': 1849,
+#                         'created_at': '2025-11-15T00:24:16.000Z',
+#                         'currency': 'NGN',
+#                         'customer': {'created_at': '2025-10-25T23:26:43.000Z',
+#                                      'email': 'ravesb_302fb78d3ebd31eee302_syntaxmerge88@gmail.com',
+#                                      'id': 3390341,
+#                                      'name': 'Novamart',
+#                                      'phone_number': '08012345678'},
+#                         'device_fingerprint': 'N/A',
+#                         'flw_ref': '2200735871451763166248967',
+#                         'id': 9794225,
+#                         'ip': '52.209.154.143',
+#                         'merchant_fee': 0,
+#                         'meta': {'__CheckoutInitAddress': 'https://localhost:5173/',
+#                                  'bankname': 'Access Bank',
+#                                  'originatoraccountnumber': '123*******90',
+#                                  'originatoramount': 'N/A',
+#                                  'originatorname': 'JOHN DOE'},
+#                         'narration': 'Novamart',
+#                         'payment_type': 'bank_transfer',
+#                         'processor_response': 'success',
+#                         'status': 'successful',
+#                         'tx_ref': '1f80e427-9aa5-489d-acf5-6dd3c1572b1e'},
+#                'message': 'Transaction fetched successfully',
+#                'status': 'success'}}

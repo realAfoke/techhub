@@ -2,6 +2,7 @@ import Header from "../components/Header";
 import { useState, useRef, useEffect } from "react";
 import { Outlet, useLoaderData, useLocation } from "react-router-dom";
 import { api } from "../utils";
+import Footer from "../components/Footer";
 
 export default function App() {
   const allData = useLoaderData();
@@ -53,12 +54,6 @@ export default function App() {
     subTotal: subTotal,
     isAuthenticated: auth,
   });
-
-  // useEffect(() => {
-  //   handleAppData({ action: "logout" });
-  // }, [localStorage.getItem("authentication")]);
-
-  // update cart item quantity or delete cart item from cart function
 
   function handleAppData(value) {
     switch (value.action) {
@@ -256,6 +251,7 @@ export default function App() {
             filter,
           }}
         />
+        <Footer />
       </div>
     </>
   );

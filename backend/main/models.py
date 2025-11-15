@@ -66,7 +66,7 @@ class User(AbstractBaseUser,PermissionsMixin):
     def send_verification_email(self):
         EmailVerificationToken.objects.filter(created__lt=timezone.now()-timedelta(hours=24),is_used=False).delete()
         token=EmailVerificationToken.objects.create(user=self)
-        verification_url=f"http://127.0.0.1:8000/verify-email/{token.token}/"
+        verification_url=f"https://localhost:8000/verify-email/{token.token}/"
         send_mail(
         subject='Verify your TechHub account',
         message=f'Click this link to verify: {verification_url}',
@@ -84,7 +84,7 @@ class User(AbstractBaseUser,PermissionsMixin):
         
         token = PasswordResetToken.objects.create(user=self)
         
-        reset_url = f"http://localhost:8000/reset-password/{token.token}/"
+        reset_url = f"https://localhost:5173/new-password/{token.token}/"
         
         send_mail(
             subject='Reset your TechHub password',
@@ -115,9 +115,6 @@ class User(AbstractBaseUser,PermissionsMixin):
                 percent_complete_value +=10
         
         return percent_complete_value
-
-
-# class AddressBook(models.Model):
 
 
     
@@ -271,7 +268,7 @@ class Order(models.Model):
     def __str__(self):
         return self.user.email
     
-    def send_pending_mail(self):
+    def send_order_confirmation(self):
         formatted=self.updated_at.strftime("%b %d %Y")
         print(formatted)
         Subject=f" Order Confirmation - Order {self.order_id}"
@@ -284,7 +281,7 @@ class Order(models.Model):
         # Order Date:{formatted}
         Status: {self.order_status}
 
-        Shipping Address:{self.shipping_address}
+        Shipping Address:{self.user.address}
         
 
         Total: ${self.total_order}
@@ -364,6 +361,11 @@ class Payment(models.Model):
 
     def __str__(self):
         return self.method
+    
+    # def send_order_placement(self):
+    #     send_mail(
+
+    #     )
 
 
 class EmailVerificationToken(models.Model):

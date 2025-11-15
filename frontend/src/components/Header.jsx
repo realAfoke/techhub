@@ -55,7 +55,7 @@ export default function Header({
                 onClick={async () => {
                   try {
                     const auth = await api.get("me/");
-                    window.location.href = "profile";
+                    window.location.href = "/profile";
                   } catch (error) {
                     console.error(error);
                     window.location.href = "/create-account";

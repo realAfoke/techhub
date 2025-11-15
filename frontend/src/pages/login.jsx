@@ -72,7 +72,7 @@ export default function Login() {
         >
           <div className="relative">
             <span
-              className={`text-[orange] absolute right-2 top-4 px-2 font-[400] text-[18px] md:text-[14px] md:top-2  ${
+              className={`text-[orange] absolute right-2 top-4 px-2 font-normal text-[18px] md:text-[14px] md:top-2  ${
                 userEmailOrPhone.value ? "block" : "hidden"
               }`}
               onClick={() =>
@@ -130,7 +130,7 @@ export default function Login() {
                 })
               }
               placeholder="Password"
-              className={`p-4  rounded-[6px] font-[400] outline-none w-full border-1 border-gray-200 md:py-2 md:text-[14px] ${
+              className={`p-4  rounded-md font-normal outline-none w-full border border-gray-200 md:py-2 md:text-[14px] ${
                 userPassword.error ? "border-red-500" : ""
               }`}
             />
@@ -142,7 +142,7 @@ export default function Login() {
           </div>
           <div>
             <button
-              className={`py-4 bg-[#80808060] font-[400] w-full rounded-[6px] text-[18px] md:text-[14px] tracking-wider} md:py-1 ${
+              className={`py-4 bg-[#80808060] font-normal w-full rounded-md text-[18px] md:text-[14px] tracking-wider} md:py-1 ${
                 userPassword.value.length > 0 &&
                 userEmailOrPhone.value.length > 0
                   ? "text-white bg-[orange]"
@@ -154,12 +154,20 @@ export default function Login() {
             >
               Login
             </button>
-            <button className="text-[orange] p-3 md:pt-2 text-center w-full font-[600] text-[17px] md:text-[12px]">
+            <button
+              className="text-[orange] p-3 md:pt-2 text-center w-full font-semibold text-[17px] md:text-[12px]"
+              onClick={(e) => {
+                e.preventDefault();
+                navigate("/reset-password", {
+                  state: { emailOrPhone: userEmailOrPhone.value },
+                });
+              }}
+            >
               Forgot you pasword ?
             </button>
           </div>
         </Form>
-        <div className="flex flex-col gap-5 px-4 pt-[3rem] md:pt-0 md:gap-2">
+        <div className="flex flex-col gap-5 px-4 pt-12 md:pt-0 md:gap-2">
           <span className="text-center md:text-[12px] md:max-w-[300px]">
             For further support, you may visit the Help Center or contact our
             customer service team.

@@ -16,16 +16,16 @@ export default function ProductList() {
     );
   });
   return (
-    <div className="bg-white mt-[8.5rem]">
+    <div className="bg-white mt-34">
       {filter.searchError && (
-        <div className="text-white bg-red-400 py-2 mt-[2rem] font-[500]">
+        <div className="text-white bg-red-400 py-2 mt-8 font-medium">
           {filter.searchError}
         </div>
       )}
 
-      <ul className="grid grid-cols-[repeat(auto-fit,minmax(10rem,1fr))]  gap-[2rem] grid-rows-[repeat(auto-fit,minmax(5rem,1fr))] p-4">
-        {allProduct}
-      </ul>
+      <ul className="flex flex-wrap p-4">{allProduct}</ul>
     </div>
   );
 }
+
+// grid grid-cols-[repeat(auto-fit,minmax(10rem,1fr))] grid-rows-[repeat(auto-fit,minmax(5rem,1fr))]

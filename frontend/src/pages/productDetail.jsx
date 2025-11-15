@@ -6,6 +6,7 @@ import retuns from "../assets/return.svg";
 import { useEffect, useState } from "react";
 import { useOutletContext } from "react-router-dom";
 import { api } from "../utils";
+import { Link } from "react-router-dom";
 
 export async function productDetailLoader({ request }) {
   try {
@@ -14,6 +15,7 @@ export async function productDetailLoader({ request }) {
       ? url.pathname.slice(1)
       : url.pathname;
     const detail = await api.get(`${endpoint}`);
+
     return detail.data;
   } catch (error) {
     console.error(error);
@@ -23,17 +25,25 @@ export async function productDetailLoader({ request }) {
 export default function ProductDetail() {
   const { addToCart } = useOutletContext();
 
-  const fullDetail = useLoaderData();
+  const fullData = useLoaderData();
+  const { productDetail } = fullData;
+  const { similiarProduct } = fullData;
+
+  let allSimiliarProduct = similiarProduct?.slice(0, 15);
+  allSimiliarProduct = allSimiliarProduct?.map((product) => {
+    return <li key={product.id}></li>;
+  });
   const [quantity, setQuantity] = useState(1);
 
-  const images = fullDetail.productImage;
+  const images = productDetail.productImage;
   const image = images[0];
   const discount = (
-    ((fullDetail?.price - fullDetail?.currentPrice) / fullDetail.price) *
+    ((productDetail?.price - productDetail?.currentPrice) /
+      productDetail.price) *
     100
   ).toPrecision(1);
 
-  const specs = Object.entries(fullDetail.specs);
+  const specs = Object.entries(productDetail.specs);
   const features = specs.map((feat, index) => {
     return (
       <li key={index} className="list-none flex gap-5">
@@ -44,62 +54,131 @@ export default function ProductDetail() {
   });
   let brand = (
     <div className="my-5">
-      <div className="px-8 text-xl py-2 font-[400]">Brand</div>
+      <div className="px-8 text-xl py-2 font-normal md:text-[16px]">Brand</div>
       <div className="px-8 flex flex-col gap-2">
-        <div>{fullDetail?.brand?.name}</div>
-        <div className="flex gap-1">
+        <div className="md:text-[14px]">{productDetail?.brand?.name}</div>
+        <div className="flex gap-1 md:text-[12px]">
           <b>Country:</b>
-          <span>{fullDetail?.brand?.country}</span>
+          <span>{productDetail?.brand?.country}</span>
         </div>
-        <div className="flex gap-1">
+        <div className="flex gap-1 md:text-[12px]">
           <b>Website :</b>
-          <span>{fullDetail?.brand?.website}</span>
+          <span>{productDetail?.brand?.website}</span>
         </div>
-        <p>{fullDetail?.brand?.description}</p>
+        <p className="md:text-[12px]">{productDetail?.brand?.description}</p>
       </div>
     </div>
   );
   return (
     <>
-      <div className="bg-gray-100 ">
+      <div className="bg-gray-100 md:flex md:h-screen md:overflow-hidden">
         <div
-          className={`${
+          className={`flex-2 ${
             images.lenght >= 1 ? "flex" : "flex justify-center"
           } bg-white`}
         >
-          <div className="flex justify-center mt-20 w-[400px]">
+          <div className="flex justify-center mt-20 w-[400px] h-[400px]">
             <img src={image.image} alt="" className="rounded-[10px]" />
           </div>
         </div>
-        <div className="grid grid-cols-[repeat(auto-fit,minmax(220px,1fr))]">
-          <div className="m-2 md:mx-1 p-8 flex flex-col gap-4 bg-white rounded-[2px]">
-            <div className="text-[20px]">{fullDetail.name}</div>
+        <div className="md:overflow-scroll flex flex-col  *:m-1 *:my-0.5">
+          <div className="p-8 md:pt-18 flex flex-col gap-2 bg-white rounded-xs">
+            <div className="text-[20px] md:text-[16px]">
+              {productDetail.name}
+            </div>
             <div className="">
-              {Number(fullDetail.price) === Number(fullDetail.currentPrice) ? (
-                <p className="font-bold">${fullDetail.price}</p>
+              {Number(productDetail.price) ===
+              Number(productDetail.currentPrice) ? (
+                <p className="font-bold md:text-[14px]">
+                  ${productDetail.price}
+                </p>
               ) : (
                 <div className="flex flex-col gap-2">
                   <div className="flex gap-2 font-bold">
-                    <del className="text-gray-500 order-2 mt-1">
-                      ${fullDetail.price}
+                    <del className="text-gray-500 order-2">
+                      ${productDetail.price}
                     </del>
-                    <p className="text-[25px]">${fullDetail.currentPrice}</p>
+                    <p className="text-[25px]">${productDetail.currentPrice}</p>
                   </div>
                   <div className="flex gap-2 text-[green]">
-                    <p>Save ${fullDetail.price - fullDetail.currentPrice}.00</p>
+                    <p>
+                      Save ${productDetail.price - productDetail.currentPrice}
+                      .00
+                    </p>
                     <div>{` (${discount}% off)`}</div>
                   </div>
                 </div>
               )}
             </div>
-            <div className="text-[green] flex gap-2 mt-5">
+            <div className="text-[green] flex md:text-[12px]">
               <img src={tick} alt="" className="w-5" />
-              <span>In Stock {` (${fullDetail.stockQuantity} available)`}</span>
+              <span>
+                In Stock {` (${productDetail.stockQuantity} available)`}
+              </span>
             </div>
-            <p className="border-b-[0.5px] border-gray-400 py-5 pb-5">
-              {fullDetail.description}
+            <p className="border-b-[0.5px] border-gray-400 py-2 pb-5 md:text-[12px]">
+              {productDetail.description}
             </p>
-            <div className="flex justify-between text-[12px] mt-5">
+            <div className={`bg-white flex flex-col md:flex-row gap-3 pt-4 `}>
+              <div className="flex gap-3">
+                <div className="flex justify-between items-center border border-gray-400 rounded-md flex-1 md:flex-none font-bold p-2 md:py-1 md:w-24">
+                  <button
+                    className="outline-none border-none"
+                    onClick={() =>
+                      setQuantity((prev) => (prev === 1 ? prev : prev - 1))
+                    }
+                  >
+                    -
+                  </button>
+
+                  <span>{quantity}</span>
+
+                  <button
+                    className="outline-none border-none"
+                    onClick={() => setQuantity((prev) => prev + 1)}
+                  >
+                    +
+                  </button>
+                </div>
+
+                <button
+                  className="bg-orange-300 text-white rounded-md flex-2 md:flex-none px-4 md:px-8 md:text-[14px]"
+                  onClick={async () => {
+                    await addToCart(productDetail.id, quantity);
+                  }}
+                >
+                  Add to Cart
+                </button>
+              </div>
+
+              <div
+                className={`gap-3 flex md:text-[12px] *:rounded-md *:border *:border-gray-400`}
+              >
+                <button className="flex-6 md:px-5 p-2">Wishlist</button>
+                <button className="flex-1 md:px-5 p-2">Share</button>
+              </div>
+            </div>
+          </div>
+          <div className="flex flex-col">
+            {/* CONTENT SECTION */}
+            <div className={`bg-white`}>
+              <div className="border-b border-[#ffa500]">
+                <div className="px-8 text-2xl py-5 font-normal md:text-[20px]">
+                  Overview
+                </div>
+              </div>
+
+              <div className="text-[20px] font-medium  px-8 md:text-[16px] pt-3">
+                Key Features
+              </div>
+
+              <div className="flex flex-col gap-3 px-8 py-5 md:text-[12px]">
+                {features}
+              </div>
+
+              <div>{productDetail?.brand && brand}</div>
+            </div>
+            <div className="flex justify-between text-[12px] bg-white p-8">
               <div className="flex flex-col gap-2 items-center">
                 <img src={delivery} alt="" className="w-8" />
                 <b>Free shipping </b>
@@ -117,61 +196,40 @@ export default function ProductDetail() {
               </div>
             </div>
           </div>
-          <div className="my-2 mt-[0.5rem] md:mt-0 flex flex-col">
-            <div className="bg-white sticky top-[80%] md:top-[0%] translate-y-[50%] md:translate-y-[5%] flex flex-col gap-1 md:pt-[0rem] md:top-[86%] mx-2 md:mx-0 md:px-2 *:px-3">
-              <div className="flex gap-3">
-                <div className="flex justify-between items-center border-1 border-gray-400 rounded-xl flex-1 font-bold">
-                  <button
-                    className="p-4  outline-none border-none"
-                    onClick={() => {
-                      setQuantity((prev) => (prev === 1 ? prev : prev - 1));
-                    }}
-                  >
-                    -
-                  </button>
-                  <span className="p-4">{quantity}</span>
-                  <button
-                    className="p-4 outline-none border-none"
-                    onClick={() => {
-                      setQuantity((prev) => prev + 1);
-                    }}
-                  >
-                    +
-                  </button>
-                </div>
-                <button
-                  className="p-4 bg-[orange] text-white rounded-xl flex-2"
-                  onClick={async () => {
-                    console.log(fullDetail.id, fullDetail);
-                    const add = await addToCart(fullDetail.id, quantity);
-                  }}
-                >
-                  Add to Cart
-                </button>
-              </div>
-              <div className="flex gap-3">
-                <button className="p-4 rounded-xl border-1 border-gray-400 flex-6">
-                  Wishlist
-                </button>
-                <button className="p-4  rounded-xl border-1 border-gray-400 flex-1">
-                  share
-                </button>
-              </div>
-            </div>
-            <div className="bg-white mx-2 md:mt-[-7rem] md:mx-0 py-5 mt-[-8.3rem]">
-              <div className="border-b-1 border-[#ffa500]">
-                <div className="px-8 text-2xl py-5 font-[400]">Overview</div>
-              </div>
-              <div className="text-[20px] font-[500] my-5 px-8">
-                Key Features
-              </div>
-              <div className="flex flex-col gap-3 px-8">{features}</div>
-              <div>{fullDetail?.brand && brand}</div>
-            </div>
-            <div className="h-[100px] md:h-[70px]"></div>
-          </div>
         </div>
       </div>
+      <SimiliarProductComp similiarProduct={similiarProduct} />
     </>
+  );
+}
+
+export function SimiliarProductComp({ similiarProduct }) {
+  const allSimiliarProduct = similiarProduct.slice(0, 14);
+  const similiarProducts = allSimiliarProduct?.map((product) => {
+    const productImage = product.productImage;
+    return (
+      <Link
+        to={`/product/${product.id}`}
+        key={product.name}
+        className=" flex py-2 px-1 items-center w-[200px] gap-2 shadow-sm"
+      >
+        <div>
+          <img
+            src={productImage[0].image}
+            alt=""
+            className="w-[150px] h-20 md:w-[150px] md:h-[100px]"
+          />
+        </div>
+        <div>
+          <div className="md:text-[12px]">{product.name}</div>
+        </div>
+      </Link>
+    );
+  });
+  return (
+    <div className=" bg-white p-5 overflow-auto">
+      <h4 className="font-semibold text-xl p-3">You may also like</h4>
+      <div className="flex gap-2 p-3">{similiarProducts}</div>
+    </div>
   );
 }
